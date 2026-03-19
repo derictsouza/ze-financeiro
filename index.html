@@ -1027,11 +1027,21 @@ function loginUser(profile){
   document.getElementById('cfg-psub').textContent='Perfil ativo: '+profile.name;
   yr=now.getFullYear(); mo=now.getMonth();
   document.getElementById('month-label').textContent=MONTHS[mo]+' '+yr;
-  // Show loading indicator while syncing from Firebase
-  document.getElementById('page-limites').innerHTML='<div class="empty">⏳ Sincronizando dados...</div>';
+
+  // Load local data immediately so app is usable right away
+  state=loadState(); pays=ld(uKey('pays'),DEF_PAYS); selectedPay=null; selectedConta=null;
   goTo('limites');
-  // Load from Firebase then hydrate localStorage
-  fbLoadBase(profile.id).then(async base=>{
+
+  // Then sync from Firebase in background (with 8s timeout)
+  const syncTimeout=setTimeout(()=>{
+    console.warn('Firebase sync timeout — using local data');
+  },8000);
+
+  Promise.race([
+    fbLoadBase(profile.id),
+    new Promise((_,rej)=>setTimeout(()=>rej(new Error('timeout')),8000))
+  ]).then(async base=>{
+    clearTimeout(syncTimeout);
     if(base&&Object.keys(base).length){
       if(base.cats)sv(uKey('cats'),base.cats);
       if(base.pays)sv(uKey('pays'),base.pays);
@@ -1040,24 +1050,20 @@ function loginUser(profile){
       if(base.fcFlags)sv(uKey('fc_flags'),base.fcFlags);
       if(base.contas)sv(uKey('contas'),base.contas);
     }
-    // Load current month from Firebase
     const md=await fbGetMonth(profile.id,yr,mo);
-    if(md&&md.expenses){sv(mKey(yr,mo),md);}
-    // Load conta transactions
+    if(md&&md.expenses)sv(mKey(yr,mo),md);
     const contas=base?.contas||ld(uKey('contas'),[]);
     for(const c of contas){
       const txs=await fbGetContaTx(profile.id,c.id);
       if(txs&&txs.length)sv(getContaTxKey(c.id),txs);
     }
     state=loadState(); pays=ld(uKey('pays'),DEF_PAYS); selectedPay=null; selectedConta=null;
-    // Restore the page properly
-    document.getElementById('page-limites').innerHTML='';
-    goTo('limites');
+    // Refresh current page silently
+    const active=document.querySelector('.page.active')?.id?.replace('page-','');
+    if(active)goTo(active);
   }).catch(err=>{
-    console.error('Firebase sync error:',err);
-    state=loadState(); pays=ld(uKey('pays'),DEF_PAYS); selectedPay=null; selectedConta=null;
-    document.getElementById('page-limites').innerHTML='';
-    goTo('limites');
+    clearTimeout(syncTimeout);
+    console.warn('Firebase sync failed, using local data:',err.message);
   });
 }
 function switchProfile(){
