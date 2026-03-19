@@ -696,11 +696,29 @@ body{
 
   // ── Expose DB helpers globally ──
   window._db = db;
-  window._fbDoc     = (path) => doc(db, ...path.split('/'));
-  window._fbGetDoc  = async (path) => { const s = await getDoc(doc(db,...path.split('/'))); return s.exists()?s.data():null; };
-  window._fbSetDoc  = (path,data) => setDoc(doc(db,...path.split('/')), data);
-  window._fbDelDoc  = (path)      => deleteDoc(doc(db,...path.split('/')));
-  window._fbGetColl = async (path) => { const s = await getDocs(collection(db,...path.split('/'))); const r={}; s.forEach(d=>r[d.id]=d.data()); return r; };
+  // Helper: path string → alternating collection/doc segments for Firestore
+  function pathToRef(path){
+    const parts = path.split('/');
+    // Firestore: doc(db, col, docId, col2, docId2, ...)
+    return doc(db, ...parts);
+  }
+  window._db = db;
+  window._fbGetDoc  = async (path) => {
+    try {
+      const s = await getDoc(pathToRef(path));
+      return s.exists() ? s.data() : null;
+    } catch(e){ console.error('[FB GET]', path, e.message); return null; }
+  };
+  window._fbSetDoc  = async (path, data) => {
+    try {
+      await setDoc(pathToRef(path), data);
+      return true;
+    } catch(e){ console.error('[FB SET]', path, e.message); return false; }
+  };
+  window._fbDelDoc  = async (path) => {
+    try { await deleteDoc(pathToRef(path)); return true; }
+    catch(e){ console.error('[FB DEL]', path, e.message); return false; }
+  };
   window._fbReady   = true;
   document.dispatchEvent(new Event('firebase-ready'));
 </script>
@@ -1038,28 +1056,35 @@ function sv(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch(e){}}
 //   ze/users/{uid}/conta_tx/{contaId} → {txs:[...]}
 
 async function fbGetProfiles(){
-  const d=await window._fbGetDoc('ze/profiles'); return d?.profiles||[];
+  // Path: collection "ze" / doc "main" / collection "data" / doc "profiles" — 4 segments ✓
+  const d=await window._fbGetDoc('ze/main/data/profiles'); return d?.profiles||[];
 }
 async function fbSaveProfiles(profiles){
-  await window._fbSetDoc('ze/profiles',{profiles});
+  const ok=await window._fbSetDoc('ze/main/data/profiles',{profiles});
+  if(!ok)console.error('[FB] Failed to save profiles');
 }
 async function fbLoadBase(uid){
-  return await window._fbGetDoc(`ze/users/${uid}/data/base`)||{};
+  // collection "users" / doc uid / collection "data" / doc "base" — 4 segments ✓
+  return await window._fbGetDoc(`users/${uid}/data/base`)||{};
 }
 async function fbSaveBase(uid,data){
-  await window._fbSetDoc(`ze/users/${uid}/data/base`,data);
+  const ok=await window._fbSetDoc(`users/${uid}/data/base`,data);
+  if(!ok)console.error('[FB] Failed to save base for',uid);
+  else console.log('[FB] Base saved for',uid);
 }
 async function fbGetMonth(uid,yr,mo){
-  return await window._fbGetDoc(`ze/users/${uid}/months/${yr}_${mo}`)||{spentMap:{},expenses:[]};
+  return await window._fbGetDoc(`users/${uid}/months/${yr}_${mo}`)||{spentMap:{},expenses:[]};
 }
 async function fbSaveMonth(uid,yr,mo,data){
-  await window._fbSetDoc(`ze/users/${uid}/months/${yr}_${mo}`,data);
+  const ok=await window._fbSetDoc(`users/${uid}/months/${yr}_${mo}`,data);
+  if(!ok)console.error('[FB] Failed to save month',yr,mo);
+  else console.log('[FB] Month saved',yr,mo);
 }
 async function fbGetContaTx(uid,contaId){
-  const d=await window._fbGetDoc(`ze/users/${uid}/conta_tx/${contaId}`); return d?.txs||[];
+  const d=await window._fbGetDoc(`users/${uid}/conta_tx/${contaId}`); return d?.txs||[];
 }
 async function fbSaveContaTx(uid,contaId,txs){
-  await window._fbSetDoc(`ze/users/${uid}/conta_tx/${contaId}`,{txs});
+  await window._fbSetDoc(`users/${uid}/conta_tx/${contaId}`,{txs});
 }
 
 function getProfiles(){return ld('ze_profiles',[]);}
@@ -1208,7 +1233,7 @@ function loginUser(profile){
   _showSyncBanner('⏳ Sincronizando dados...','#6B7280');
 
   Promise.race([
-    fbLoadBase(profile.id),
+    fbLoadBase(profile.id).then(b=>{console.log('[FB] Base loaded:',b?'OK':'empty'); return b;}),
     new Promise((_,rej)=>setTimeout(()=>rej(new Error('timeout')),10000))
   ]).then(async base=>{
     if(base&&Object.keys(base).length){
