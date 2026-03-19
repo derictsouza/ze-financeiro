@@ -872,7 +872,7 @@ function checkAccessCode(){
   const err=document.getElementById('access-err');
   if(input===ACCESS_CODE){
     err.style.display='none';
-    sv('ze_access_ok',true);
+    sessionStorage.setItem('ze_access_ok','1');
     document.getElementById('access-screen').style.display='none';
     document.getElementById('login-screen').style.display='flex';
     renderLogin();
@@ -2393,7 +2393,6 @@ function delExp(i){
 }
 
 /* ── INIT ── */
-// Verifica se o código de acesso já foi inserido nesta sessão
 if(sessionStorage.getItem('ze_access_ok')){
   document.getElementById('access-screen').style.display='none';
   document.getElementById('login-screen').style.display='flex';
@@ -2401,17 +2400,9 @@ if(sessionStorage.getItem('ze_access_ok')){
   const lastId=localStorage.getItem('ze_last');
   if(lastId){const p=getProfiles().find(x=>x.id===lastId);if(p&&!p.pin)loginUser(p);}
 } else {
-  // Mostra tela de código
   document.getElementById('access-screen').style.display='flex';
   document.getElementById('login-screen').style.display='none';
   setTimeout(()=>document.getElementById('access-code-input')?.focus(),100);
-}
-
-// Sobrescreve sv para usar sessionStorage no controle de acesso
-const _sv_orig=sv;
-function sv(k,v){
-  if(k==='ze_access_ok'){sessionStorage.setItem('ze_access_ok','1');return;}
-  _sv_orig(k,v);
 }
 </script>
 </body>
