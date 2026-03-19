@@ -521,6 +521,161 @@ body{
 .ms:hover{background:var(--navy-soft);box-shadow:0 4px 16px rgba(12,35,64,0.3)}
 .md{padding:9px 16px;background:transparent;border:1px solid rgba(220,38,38,0.3);border-radius:var(--r);font-size:11px;cursor:pointer;color:var(--red);margin-right:auto;font-family:var(--font);font-weight:600;transition:background 0.15s}
 .md:hover{background:var(--red-bg)}
+
+/* ════════════════════════════════════════
+   MOBILE RESPONSIVE — max-width: 768px
+════════════════════════════════════════ */
+@media(max-width:768px){
+
+  body{padding:0}
+
+  /* ── App shell ── */
+  .app{
+    height:100dvh;min-height:0;
+    border-radius:0;border:none;
+    max-width:100%;
+  }
+
+  /* ── Login ── */
+  .login-screen{padding:20px 16px;justify-content:flex-start;padding-top:48px}
+  .login-brand{margin-bottom:24px}
+  .login-card{padding:20px 16px}
+
+  /* ── Topbar ── */
+  .topbar{padding:0 12px;height:50px;flex-wrap:wrap}
+  .bsub{display:none}
+  .swbtn{display:none}
+  .mlbl{min-width:90px;font-size:10px}
+  .mbtn{padding:4px 8px}
+
+  /* ── Nav tabs — scrollable pill bar ── */
+  .nav-tabs{
+    padding:0;
+    gap:0;
+    -webkit-overflow-scrolling:touch;
+  }
+  .nt{
+    height:38px;
+    padding:0 10px;
+    font-size:9px;
+    gap:3px;
+  }
+
+  /* ── LIMITES ── */
+  .limites-page{flex-direction:column !important}
+  .cat-panel{
+    width:100% !important;
+    border-right:none !important;
+    border-bottom:1px solid var(--border);
+    max-height:45vh;
+    overflow-y:auto;
+  }
+  .sum-panel{padding:12px}
+  .sg{grid-template-columns:1fr 1fr;gap:8px}
+  .sc{padding:10px 12px}
+  .sv{font-size:16px}
+
+  /* ── GASTOS ── */
+  .gastos-page{flex-direction:column !important}
+  .ginner{flex-direction:column !important}
+  .gleft{
+    width:100% !important;
+    border-right:none !important;
+    border-bottom:1px solid var(--border);
+    max-height:40vh;
+    overflow-y:auto;
+  }
+  .gright{flex:1;overflow-y:auto}
+  .hero-val{font-size:22px}
+
+  /* ── RECEITAS & DESPESAS ── */
+  .rdpage{flex-direction:column !important}
+  .rdleft{
+    width:100% !important;
+    border-right:none !important;
+    border-bottom:1px solid var(--border);
+    max-height:45vh;
+  }
+  .rdright{flex:1;overflow-y:auto;min-height:200px}
+
+  /* ── P&L ── */
+  .pl-page{padding:10px}
+  .pl-hero{
+    grid-template-columns:1fr 1fr !important;
+    gap:8px;
+  }
+  .plhv{font-size:16px}
+  .plth,.plr{
+    grid-template-columns:1fr 90px 70px !important;
+  }
+  /* hide 4th column on mobile */
+  .plth div:nth-child(4),.plr div:nth-child(4){display:none}
+
+  /* ── FLUXO DE CAIXA ── */
+  .fc-top{padding:8px 12px;gap:8px}
+  .fc-legend{display:none}
+  .fc-summary-bar{gap:10px;padding:10px 12px;flex-wrap:wrap}
+  .fc-sum-val{font-size:12px}
+  .fc-item{padding:9px 12px 9px 16px}
+
+  /* ── PAGAMENTOS ── */
+  .pag-inner{flex-direction:column !important}
+  .pag-left{
+    width:100% !important;
+    border-right:none !important;
+    border-bottom:1px solid var(--border);
+    max-height:40vh;
+  }
+  .pag-right{flex:1;overflow-y:auto}
+
+  /* ── REGISTRAR ── */
+  .reg-inner{
+    grid-template-columns:1fr !important;
+    overflow-y:auto;
+  }
+  .reg-col{
+    border-right:none !important;
+    border-bottom:1px solid var(--border);
+    overflow-y:visible;
+  }
+  .reg-col:last-child{border-bottom:none}
+
+  /* ── BANCO ── */
+  .banco-page{flex-direction:column !important}
+  .banco-left{
+    width:100% !important;
+    border-right:none !important;
+    border-bottom:1px solid var(--border);
+    max-height:45vh;
+    overflow-y:auto;
+  }
+  .banco-right{flex:1;overflow-y:auto;min-height:200px}
+
+  /* ── CONFIG ── */
+  .cfg-page{padding:10px}
+  .cfg-af{flex-direction:column}
+  .cfg-af .ff{width:100% !important;min-width:0 !important}
+
+  /* ── MODAL ── */
+  .modal{
+    padding:20px 16px;
+    max-height:85dvh;
+    margin:0 8px;
+    width:calc(100% - 16px);
+  }
+
+  /* ── Annual P&L table ── */
+  .pl-anual-wrap{font-size:10px}
+  .pl-anual th,.pl-anual td{padding:6px 8px}
+}
+
+/* Extra small phones */
+@media(max-width:400px){
+  .sg{grid-template-columns:1fr}
+  .pl-hero{grid-template-columns:1fr 1fr}
+  .topbar .tr{gap:6px}
+  .mlbl{min-width:76px}
+}
 </style>
 <!-- Firebase SDK -->
 <script type="module">
