@@ -1055,36 +1055,42 @@ function sv(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch(e){}}
 //   ze/users/{uid}/months/{yr_mo} → {spentMap, expenses}
 //   ze/users/{uid}/conta_tx/{contaId} → {txs:[...]}
 
+// Firestore path rules: always even segments (col/doc/col/doc...)
+// profiles  → "ze/profiles"              — col:ze, doc:profiles        ✓ 2 segs
+// base      → "users/uid"                — col:users, doc:uid          ✓ 2 segs  (store everything in one doc)
+// months    → "months/uid_yr_mo"         — col:months, doc:uid_yr_mo   ✓ 2 segs
+// conta_tx  → "conta_tx/uid_contaId"     — col:conta_tx, doc:compound  ✓ 2 segs
+
 async function fbGetProfiles(){
-  // Path: collection "ze" / doc "main" / collection "data" / doc "profiles" — 4 segments ✓
-  const d=await window._fbGetDoc('ze/main/data/profiles'); return d?.profiles||[];
+  const d=await window._fbGetDoc('ze/profiles'); return d?.profiles||[];
 }
 async function fbSaveProfiles(profiles){
-  const ok=await window._fbSetDoc('ze/main/data/profiles',{profiles});
+  const ok=await window._fbSetDoc('ze/profiles',{profiles});
   if(!ok)console.error('[FB] Failed to save profiles');
+  else console.log('[FB] Profiles saved');
 }
 async function fbLoadBase(uid){
-  // collection "users" / doc uid / collection "data" / doc "base" — 4 segments ✓
-  return await window._fbGetDoc(`users/${uid}/data/base`)||{};
+  return await window._fbGetDoc(`users/${uid}`)||{};
 }
 async function fbSaveBase(uid,data){
-  const ok=await window._fbSetDoc(`users/${uid}/data/base`,data);
+  const ok=await window._fbSetDoc(`users/${uid}`,data);
   if(!ok)console.error('[FB] Failed to save base for',uid);
   else console.log('[FB] Base saved for',uid);
 }
 async function fbGetMonth(uid,yr,mo){
-  return await window._fbGetDoc(`users/${uid}/months/${yr}_${mo}`)||{spentMap:{},expenses:[]};
+  return await window._fbGetDoc(`months/${uid}_${yr}_${mo}`)||{spentMap:{},expenses:[]};
 }
 async function fbSaveMonth(uid,yr,mo,data){
-  const ok=await window._fbSetDoc(`users/${uid}/months/${yr}_${mo}`,data);
+  const ok=await window._fbSetDoc(`months/${uid}_${yr}_${mo}`,data);
   if(!ok)console.error('[FB] Failed to save month',yr,mo);
   else console.log('[FB] Month saved',yr,mo);
 }
 async function fbGetContaTx(uid,contaId){
-  const d=await window._fbGetDoc(`users/${uid}/conta_tx/${contaId}`); return d?.txs||[];
+  const d=await window._fbGetDoc(`conta_tx/${uid}_${contaId}`); return d?.txs||[];
 }
 async function fbSaveContaTx(uid,contaId,txs){
-  await window._fbSetDoc(`users/${uid}/conta_tx/${contaId}`,{txs});
+  const ok=await window._fbSetDoc(`conta_tx/${uid}_${contaId}`,{txs});
+  if(!ok)console.error('[FB] Failed to save conta_tx',contaId);
 }
 
 function getProfiles(){return ld('ze_profiles',[]);}
