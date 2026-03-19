@@ -803,7 +803,7 @@ body{
     <button class="nt" id="nav-pl" onclick="goTo('pl')">📈 P&L</button>
     <button class="nt" id="nav-fc" onclick="goTo('fc')">💸 Fluxo de Caixa</button>
     <button class="nt" id="nav-banco" onclick="goTo('banco')">🏦 Contas</button>
-    <button class="nt" id="nav-pag" onclick="goTo('pag')">💳 Pagamentos</button>
+    <button class="nt" id="nav-pag" onclick="goTo('pag')">💳 Faturas</button>
     <button class="nt" id="nav-reg" onclick="goTo('reg')">➕ Registrar</button>
     <button class="nt" id="nav-cfg" onclick="goTo('cfg')">⚙️ Config</button>
   </div>
@@ -899,10 +899,10 @@ body{
   <div class="page pag-page" id="page-pag">
     <div class="pag-inner">
       <div class="pag-left">
-        <div class="phdr"><span class="slbl2">Por forma de pagamento</span></div>
+        <div class="phdr"><span class="slbl2">Formas de pagamento</span></div>
         <div id="pag-cards"></div>
       </div>
-      <div class="pag-right" id="pag-detail"><div class="empty">Selecione.</div></div>
+      <div class="pag-right" id="pag-detail"><div class="empty">Selecione um método.</div></div>
     </div>
   </div>
 
@@ -2363,17 +2363,23 @@ function renderFC(){
     events.push({day,type:'fatura',color:'#BA7517',icon:'💳',name:`Fatura ${f.payment}`,meta:`${f.exps.length} gasto(s) de ${MONTHS[mo===0?11:mo-1]}`,val:f.total,id:'fat_'+f.payment.replace(/\s/g,'_')});
   });
 
-  // 3. Gastos à vista do mês (débito/pix/dinheiro) – agrupados por dia
-  const avistaByDay={};
+  // 3. Gastos à vista do mês (débito/pix/dinheiro) — agrupados por método e dia
+  // Crédito já aparece como fatura (item 2), então só mostramos à vista aqui
+  const avistaByPayDay={};
   getGastosAvistaMes().forEach(exp=>{
     const d=new Date(exp.date.split('/').reverse().join('-')+'T12:00:00');
-    const day=d.getDate(); if(!avistaByDay[day])avistaByDay[day]=[];
-    avistaByDay[day].push(exp);
+    const day=d.getDate();
+    const payKey=(exp.payment||'Sem pagamento')+'__'+day;
+    if(!avistaByPayDay[payKey])avistaByPayDay[payKey]={day,payment:exp.payment||'Sem pagamento',exps:[]};
+    avistaByPayDay[payKey].exps.push(exp);
   });
-  Object.entries(avistaByDay).forEach(([day,exps])=>{
+  Object.values(avistaByPayDay).forEach(({day,payment,exps})=>{
     const total=exps.reduce((a,e)=>a+e.amount,0);
-    const id='avista_'+day;
-    events.push({day:parseInt(day),type:'avista',color:'#E24B4A',icon:'💵',name:`${exps.length} gasto(s) à vista`,meta:exps.map(e=>{const cat=state.cats.find(c=>c.id===e.catId);const sub=cat?.subcategories.find(s=>s.id===e.subId);return sub?.name||e.catId;}).join(', '),val:total,id});
+    const pay=pays.find(p=>p.name===payment);
+    const icon=pay?.icon||'💵';
+    const id='avista_'+payment.replace(/\s/g,'_')+'_'+day;
+    const cats=exps.map(e=>{const cat=state.cats.find(c=>c.id===e.catId);const sub=cat?.subcategories.find(s=>s.id===e.subId);return sub?.name||e.catId;}).join(', ');
+    events.push({day,type:'avista',color:'#E24B4A',icon,name:`${payment} · ${exps.length} gasto(s)`,meta:cats,val:total,id});
   });
 
   // 4. Despesas fixas do mês
@@ -2455,75 +2461,198 @@ function renderFC(){
 
 /* ── PAGAMENTOS ── */
 function renderPag(){
-  const map={};
-  state.expenses.forEach(exp=>{
-    const k=exp.payment||'sem pagamento';
-    if(!map[k])map[k]={name:k,total:0,count:0,items:[]};
-    map[k].total=Math.round((map[k].total+exp.amount)*100)/100; map[k].count++; map[k].items.push({...exp,_t:'gasto'});
+  // ── Helpers ──
+  // Fatura a PAGAR neste mês = gastos de crédito do mês ANTERIOR
+  // Fatura EM ABERTO = gastos de crédito do mês ATUAL (vence no próximo)
+  let pm=mo-1, py=yr; if(pm<0){pm=11;py=yr-1;}
+  let nm=mo+1, ny=yr; if(nm>11){nm=0;ny=yr+1;}
+
+  // Build card list: one entry per pay method
+  const entries=pays.map(pay=>{
+    const isC=isCredit(pay.name);
+
+    // Gastos do mês atual com este método
+    const gastosAtual=state.expenses.filter(e=>e.payment===pay.name);
+    const totalAtual=gastosAtual.reduce((a,e)=>a+e.amount,0);
+
+    // Se crédito: fatura a pagar = gastos do mês anterior
+    let faturaAPagar=0, gastosFaturaAtual=[];
+    if(isC){
+      const prevMd=ld(mKey(py,pm),{spentMap:{},expenses:[]});
+      gastosFaturaAtual=(prevMd.expenses||[]).filter(e=>e.payment===pay.name);
+      faturaAPagar=gastosFaturaAtual.reduce((a,e)=>a+e.amount,0);
+    }
+
+    return{pay,isC,gastosAtual,totalAtual,faturaAPagar,gastosFaturaAtual};
+  }).filter(e=>e.totalAtual>0||e.faturaAPagar>0||e.gastosAtual.length>0);
+
+  // Add methods with no activity too
+  const allPays=pays.map(pay=>{
+    const found=entries.find(e=>e.pay.name===pay.name);
+    if(found)return found;
+    const isC=isCredit(pay.name);
+    return{pay,isC,gastosAtual:[],totalAtual:0,faturaAPagar:0,gastosFaturaAtual:[]};
   });
-  getReceitasMes().forEach(r=>{
-    const k=r.pagamento||'sem pagamento';
-    if(!map[k])map[k]={name:k,total:0,count:0,items:[]};
-    map[k].items.push({...r,_t:'rec'});
-  });
-  pays.forEach(p=>{if(!map[p.name])map[p.name]={name:p.name,total:0,count:0,items:[]};});
-  const entries=Object.values(map).filter(e=>e.total>0||e.count>0).sort((a,b)=>b.total-a.total);
+
   const cards=document.getElementById('pag-cards');
-  if(!entries.length){cards.innerHTML='<div class="empty">Nenhum lançamento.</div>';return;}
   cards.innerHTML='';
-  entries.forEach(entry=>{
-    const pay=pays.find(p=>p.name===entry.name);
-    const card=document.createElement('div'); card.className='pag-card'+(selectedPay===entry.name?' sel':'');
-    const fatInfo=pay?.diaFatura?` · Fatura dia ${pay.diaFatura}`:'';
-    card.innerHTML=`<div class="pch">
-      <span style="font-size:17px;width:26px;text-align:center">${pay?.icon||'💰'}</span>
-      <div style="flex:1"><div style="font-size:12px;font-weight:600;color:var(--text)">${entry.name}</div>
-        <div style="font-size:10px;color:var(--text2)">${pay?.type||''}${fatInfo}</div></div>
-      <span style="font-size:14px;font-weight:600;color:var(--text)">${fmt(entry.total)}</span>
-    </div><div class="pcb"><div style="font-size:11px;color:var(--text2)">${entry.items.filter(i=>i._t==='gasto').length} gasto(s)${isCredit(entry.name)?' → fatura próx. mês':''}</div></div>`;
-    card.onclick=()=>{selectedPay=entry.name;renderPag();};
-    cards.appendChild(card);
-  });
-  if(!selectedPay&&entries.length)selectedPay=entries[0].name;
-  const sel=map[selectedPay]||entries[0]; if(!sel)return;
-  const pay=pays.find(p=>p.name===sel.name);
-  const gastos=sel.items.filter(i=>i._t==='gasto');
-  const catMap={};
-  gastos.forEach(exp=>{const cat=state.cats.find(c=>c.id===exp.catId);const k=cat?.name||exp.catId;if(!catMap[k])catMap[k]={name:k,icon:cat?.icon||'📦',color:cat?.color||'#888',total:0};catMap[k].total=Math.round((catMap[k].total+exp.amount)*100)/100;});
-  const catE=Object.values(catMap).sort((a,b)=>b.total-a.total); const maxC=catE[0]?.total||1;
-  document.getElementById('pag-detail').innerHTML=`
-    <div style="padding:14px 16px 10px;border-bottom:0.5px solid var(--border);display:flex;align-items:center;gap:10px">
-      <span style="font-size:22px">${pay?.icon||'💰'}</span>
-      <div><div style="font-size:14px;font-weight:600;color:var(--text)">${sel.name}</div>
-        <div style="font-size:11px;color:var(--text2)">${pay?.type||''} · ${MONTHS[mo]} ${yr}${pay?.diaFatura?' · Fatura dia '+pay.diaFatura:''}</div>
-        ${isCredit(sel.name)?`<div style="font-size:11px;color:#BA7517;margin-top:2px">💳 Gastos deste mês → fatura em ${MONTHS[mo===11?0:mo+1]}</div>`:''}
+
+  allPays.forEach(entry=>{
+    const {pay,isC,totalAtual,faturaAPagar}=entry;
+    const card=document.createElement('div');
+    card.className='pag-card'+(selectedPay===pay.name?' sel':'');
+
+    const badge=isC
+      ?`<span style="font-size:9px;padding:2px 7px;border-radius:20px;background:var(--amber-bg);color:var(--amber);font-weight:700">CRÉDITO</span>`
+      :`<span style="font-size:9px;padding:2px 7px;border-radius:20px;background:var(--green-bg);color:var(--green);font-weight:700">À VISTA</span>`;
+
+    card.innerHTML=`<div class="pch" style="gap:10px">
+      <span style="font-size:20px;width:28px;text-align:center">${pay.icon||'💳'}</span>
+      <div style="flex:1;min-width:0">
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:2px">
+          <span style="font-size:12px;font-weight:700;color:var(--text)">${pay.name}</span>
+          ${badge}
+        </div>
+        <div style="font-size:10px;color:var(--text3)">${pay.type}${pay.diaFatura?' · vence dia '+pay.diaFatura:''}</div>
       </div>
     </div>
-    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:12px 16px;border-bottom:0.5px solid var(--border)">
-      <div style="background:var(--bg2);border-radius:var(--r);padding:9px 11px"><div style="font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.04em;margin-bottom:3px">Total gastos</div><div style="font-size:16px;font-weight:600;color:#E24B4A">${fmt(sel.total)}</div></div>
-      <div style="background:var(--bg2);border-radius:var(--r);padding:9px 11px"><div style="font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.04em;margin-bottom:3px">Lançamentos</div><div style="font-size:16px;font-weight:600;color:var(--text)">${gastos.length}</div></div>
-      <div style="background:var(--bg2);border-radius:var(--r);padding:9px 11px"><div style="font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.04em;margin-bottom:3px">Ticket médio</div><div style="font-size:16px;font-weight:600;color:var(--text)">${gastos.length?fmt(Math.round(sel.total/gastos.length*100)/100):fmt(0)}</div></div>
-    </div>
-    ${catE.length?`<div style="padding:12px 16px;border-bottom:0.5px solid var(--border)">
-      <div style="font-size:10px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">Por categoria</div>
-      ${catE.map(c=>`<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:0.5px solid var(--border)">
+    <div class="pcb" style="display:flex;justify-content:space-between;align-items:center">
+      ${isC?`
+        <div style="text-align:center">
+          <div style="font-size:9px;color:var(--text3);font-weight:700;text-transform:uppercase;letter-spacing:.06em">Fatura atual</div>
+          <div style="font-size:13px;font-weight:800;color:${faturaAPagar>0?'var(--red)':'var(--text3)'};font-family:var(--font-mono)">${faturaAPagar>0?fmt(faturaAPagar):'—'}</div>
+          <div style="font-size:9px;color:var(--text3)">vence este mês</div>
+        </div>
+        <div style="width:1px;height:32px;background:var(--border)"></div>
+        <div style="text-align:center">
+          <div style="font-size:9px;color:var(--text3);font-weight:700;text-transform:uppercase;letter-spacing:.06em">Em aberto</div>
+          <div style="font-size:13px;font-weight:800;color:${totalAtual>0?'var(--amber)':'var(--text3)'};font-family:var(--font-mono)">${totalAtual>0?fmt(totalAtual):'—'}</div>
+          <div style="font-size:9px;color:var(--text3)">vence em ${MONTHS[nm].slice(0,3)}</div>
+        </div>`
+      :`<div>
+          <div style="font-size:9px;color:var(--text3);font-weight:700;text-transform:uppercase;letter-spacing:.06em">Gasto no mês</div>
+          <div style="font-size:13px;font-weight:800;color:${totalAtual>0?'var(--red)':'var(--text3)'};font-family:var(--font-mono)">${totalAtual>0?fmt(totalAtual):'—'}</div>
+        </div>`}
+    </div>`;
+    card.onclick=()=>{selectedPay=pay.name;renderPag();};
+    cards.appendChild(card);
+  });
+
+  if(!selectedPay&&allPays.length)selectedPay=allPays[0].pay.name;
+  const selEntry=allPays.find(e=>e.pay.name===selectedPay)||allPays[0];
+  if(!selEntry)return;
+
+  const {pay,isC,gastosAtual,totalAtual,faturaAPagar,gastosFaturaAtual}=selEntry;
+
+  // ── Detail panel ──
+  const prevMd=ld(mKey(py,pm),{spentMap:{},expenses:[]});
+
+  // Category breakdown helper
+  function catBreakdown(exps){
+    const map={};
+    exps.forEach(e=>{
+      const cat=state.cats.find(c=>c.id===e.catId);
+      const k=cat?.name||e.catId;
+      if(!map[k])map[k]={name:k,icon:cat?.icon||'📦',color:cat?.color||'#888',total:0};
+      map[k].total=Math.round((map[k].total+e.amount)*100)/100;
+    });
+    const arr=Object.values(map).sort((a,b)=>b.total-a.total);
+    const maxV=arr[0]?.total||1;
+    return arr.map(c=>`
+      <div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--border3)">
         <span style="font-size:13px;width:18px;text-align:center">${c.icon}</span>
-        <span style="flex:1;font-size:12px;color:var(--text)">${c.name}</span>
-        <div style="width:80px;height:4px;background:var(--border);border-radius:4px;overflow:hidden"><div style="width:${Math.round(c.total/maxC*100)}%;height:100%;background:${c.color};border-radius:4px"></div></div>
-        <span style="font-size:12px;font-weight:600;color:var(--text);min-width:80px;text-align:right">${fmt(c.total)}</span>
-      </div>`).join('')}
-    </div>`:''}
-    <div style="padding:10px 16px 4px;font-size:10px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.07em">Lançamentos</div>
-    ${[...gastos].reverse().map(exp=>{
-      const cat=state.cats.find(c=>c.id===exp.catId); const sub=cat?.subcategories.find(s=>s.id===exp.subId);
-      return`<div style="display:flex;align-items:center;gap:8px;padding:9px 16px;border-bottom:0.5px solid var(--border)">
+        <span style="flex:1;font-size:11px;color:var(--text)">${c.name}</span>
+        <div style="width:60px;height:3px;background:var(--bg5);border-radius:4px;overflow:hidden"><div style="width:${Math.round(c.total/maxV*100)}%;height:100%;background:${c.color};border-radius:4px"></div></div>
+        <span style="font-size:11px;font-weight:700;color:var(--text);min-width:72px;text-align:right;font-family:var(--font-mono)">${fmt(c.total)}</span>
+      </div>`).join('');
+  }
+
+  function expRows(exps, emptyMsg){
+    if(!exps.length)return`<div class="empty" style="padding:24px">${emptyMsg}</div>`;
+    return[...exps].reverse().map(exp=>{
+      const cat=state.cats.find(c=>c.id===exp.catId);
+      const sub=cat?.subcategories.find(s=>s.id===exp.subId);
+      return`<div style="display:flex;align-items:center;gap:10px;padding:9px 16px;border-bottom:1px solid var(--border3)">
         <span style="font-size:13px;width:18px;text-align:center">${cat?.icon||'📦'}</span>
-        <div style="flex:1;min-width:0"><div style="font-size:12px;color:var(--text)">${sub?.name||exp.subId} <span style="color:var(--text2)">· ${cat?.name||''}</span></div>
-          <div style="font-size:10px;color:var(--text2);margin-top:1px">${exp.date}${exp.note?' · '+exp.note:''}</div></div>
-        <div style="font-size:13px;font-weight:600;color:#E24B4A">${fmt(exp.amount)}</div>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:12px;color:var(--text);font-weight:500">${sub?.name||exp.subId} <span style="color:var(--text3)">· ${cat?.name||''}</span></div>
+          <div style="font-size:10px;color:var(--text3);margin-top:1px">${exp.date||''}${exp.note?' · '+exp.note:''}</div>
+        </div>
+        <div style="font-size:13px;font-weight:700;color:var(--red);font-family:var(--font-mono)">${fmt(exp.amount)}</div>
       </div>`;
-    }).join('')||'<div class="empty">Nenhum gasto.</div>'}`;
+    }).join('');
+  }
+
+  let detail=`
+    <!-- Header -->
+    <div style="padding:14px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px;background:var(--bg2)">
+      <span style="font-size:26px">${pay.icon||'💳'}</span>
+      <div>
+        <div style="font-size:15px;font-weight:800;color:var(--text)">${pay.name}</div>
+        <div style="font-size:11px;color:var(--text3)">${pay.type}${pay.diaFatura?' · Fatura vence dia '+pay.diaFatura:''}</div>
+      </div>
+    </div>`;
+
+  if(isC){
+    // ── Bloco 1: Fatura a PAGAR (mês anterior) ──
+    detail+=`
+    <div style="padding:12px 16px;background:${faturaAPagar>0?'rgba(220,38,38,0.04)':'var(--bg)'};border-bottom:1px solid var(--border)">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+        <div>
+          <div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.08em">💳 Fatura a pagar</div>
+          <div style="font-size:11px;color:var(--text3);margin-top:2px">Gastos de ${MONTHS[pm]} ${py} · vence dia ${pay.diaFatura||'?'} de ${MONTHS[mo]}</div>
+        </div>
+        <div style="font-size:22px;font-weight:800;color:${faturaAPagar>0?'var(--red)':'var(--text3)'};font-family:var(--font-mono)">${faturaAPagar>0?fmt(faturaAPagar):'R$ 0,00'}</div>
+      </div>
+      ${gastosFaturaAtual.length?`
+        <div style="font-size:9px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px">Por categoria</div>
+        ${catBreakdown(gastosFaturaAtual)}
+        <div style="margin-top:10px;font-size:9px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px">Lançamentos (${gastosFaturaAtual.length})</div>
+        ${expRows(gastosFaturaAtual,'Nenhum gasto.')}
+      `:`<div style="font-size:12px;color:var(--text3);padding:8px 0">Sem gastos em ${MONTHS[pm]}.</div>`}
+    </div>`;
+
+    // ── Bloco 2: Fatura EM ABERTO (mês atual) ──
+    detail+=`
+    <div style="padding:12px 16px;border-bottom:1px solid var(--border)">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+        <div>
+          <div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.08em">🟡 Fatura em aberto</div>
+          <div style="font-size:11px;color:var(--text3);margin-top:2px">Gastos de ${MONTHS[mo]} ${yr} · vence dia ${pay.diaFatura||'?'} de ${MONTHS[nm]} ${ny}</div>
+        </div>
+        <div style="font-size:22px;font-weight:800;color:${totalAtual>0?'var(--amber)':'var(--text3)'};font-family:var(--font-mono)">${totalAtual>0?fmt(totalAtual):'R$ 0,00'}</div>
+      </div>
+      ${gastosAtual.length?`
+        <div style="font-size:9px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px">Por categoria</div>
+        ${catBreakdown(gastosAtual)}
+        <div style="margin-top:10px;font-size:9px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px">Lançamentos (${gastosAtual.length})</div>
+        ${expRows(gastosAtual,'Nenhum gasto ainda.')}
+      `:`<div style="font-size:12px;color:var(--text3);padding:8px 0">Nenhum gasto em ${MONTHS[mo]} ainda.</div>`}
+    </div>`;
+
+  } else {
+    // ── À vista / Débito / Pix: só mês atual ──
+    detail+=`
+    <div style="padding:12px 16px;border-bottom:1px solid var(--border)">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+        <div>
+          <div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.08em">💵 Gastos do mês</div>
+          <div style="font-size:11px;color:var(--text3);margin-top:2px">${MONTHS[mo]} ${yr} · debitado na hora</div>
+        </div>
+        <div style="font-size:22px;font-weight:800;color:${totalAtual>0?'var(--red)':'var(--text3)'};font-family:var(--font-mono)">${totalAtual>0?fmt(totalAtual):'R$ 0,00'}</div>
+      </div>
+      ${gastosAtual.length?`
+        <div style="font-size:9px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px">Por categoria</div>
+        ${catBreakdown(gastosAtual)}
+        <div style="margin-top:10px;font-size:9px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px">Lançamentos (${gastosAtual.length})</div>
+        ${expRows(gastosAtual,'Nenhum gasto neste mês.')}
+      `:`<div style="font-size:12px;color:var(--text3);padding:8px 0">Nenhum gasto em ${MONTHS[mo]}.</div>`}
+    </div>`;
+  }
+
+  document.getElementById('pag-detail').innerHTML=detail;
 }
+
 
 /* ── REGISTRAR ── */
 function renderReg(){
