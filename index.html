@@ -845,10 +845,13 @@ body{
         <button class="pl-tab active" id="pl-tab-mes" onclick="switchPLTab('mes')">📋 Mês atual</button>
         <button class="pl-tab" id="pl-tab-anual" onclick="switchPLTab('anual')">📅 Projeção anual</button>
       </div>
-      <div id="pl-anual-year-nav" style="display:none;align-items:center;gap:8px">
-        <button class="mbtn" onclick="changePLYear(-1)">‹</button>
-        <span id="pl-year-lbl" style="font-size:12px;font-weight:600;color:var(--text)"></span>
-        <button class="mbtn" onclick="changePLYear(1)">›</button>
+      <div style="display:flex;align-items:center;gap:8px">
+        <button class="rbtn" id="pl-toggle-detail" onclick="togglePLDetail()" style="font-size:10px;padding:5px 12px">📋 Resumido</button>
+        <div id="pl-anual-year-nav" style="display:none;align-items:center;gap:8px">
+          <button class="mbtn" onclick="changePLYear(-1)">‹</button>
+          <span id="pl-year-lbl" style="font-size:12px;font-weight:600;color:var(--text)"></span>
+          <button class="mbtn" onclick="changePLYear(1)">›</button>
+        </div>
       </div>
     </div>
     <div class="pl-note" id="pl-note"></div>
@@ -920,8 +923,9 @@ body{
           <div class="ff"><label>Forma de recebimento</label><select id="r-pay"></select></div>
           <div class="ff"><label>Data de recebimento</label><input id="r-date" type="date"></div>
           <div class="ff"><label>Recorrente (todo mês)?</label>
-            <select id="r-rec"><option value="0">Não, entrada única</option><option value="1">Sim, todo mês</option></select>
+            <select id="r-rec" onchange="toggleDiaRecebimento()"><option value="0">Não, entrada única</option><option value="1">Sim, todo mês</option></select>
           </div>
+          <div class="ff" id="r-dia-wrap" style="display:none"><label>Dia do mês que recebe</label><input id="r-dia" type="number" min="1" max="31" placeholder="Ex: 5"></div>
           <div class="ff"><label>Observação</label><input id="r-note" placeholder="Opcional"></div>
           <div class="toast" id="r-toast"></div>
           <button class="sbtn" style="background:#1D9E75;color:#fff" onclick="submitReceita()">Registrar receita</button>
@@ -1173,6 +1177,23 @@ function tryPin(id){
   if(p&&inp.value===p.pin){closeModal();window._pinOk&&window._pinOk();}
   else{document.getElementById('pin-err').style.display='block';inp.value='';inp.focus();}
 }
+function _showSyncBanner(msg,color){
+  let b=document.getElementById('sync-banner');
+  if(!b){
+    b=document.createElement('div');
+    b.id='sync-banner';
+    b.style.cssText='position:fixed;bottom:16px;left:50%;transform:translateX(-50%);background:'+color+';color:#fff;padding:8px 20px;border-radius:20px;font-size:12px;font-weight:700;z-index:999;box-shadow:0 4px 16px rgba(0,0,0,0.2);transition:opacity 0.4s;font-family:var(--font)';
+    document.body.appendChild(b);
+  }
+  b.style.background=color;
+  b.style.opacity='1';
+  b.textContent=msg;
+}
+function _hideSyncBanner(){
+  const b=document.getElementById('sync-banner');
+  if(b){b.style.opacity='0';setTimeout(()=>b.remove(),400);}
+}
+
 function loginUser(profile){
   currentUser=profile; sv('ze_last',profile.id);
   document.getElementById('login-screen').style.display='none';
@@ -1183,20 +1204,13 @@ function loginUser(profile){
   yr=now.getFullYear(); mo=now.getMonth();
   document.getElementById('month-label').textContent=MONTHS[mo]+' '+yr;
 
-  // Load local data immediately so app is usable right away
-  state=loadState(); pays=ld(uKey('pays'),DEF_PAYS); selectedPay=null; selectedConta=null;
-  goTo('limites');
-
-  // Then sync from Firebase in background (with 8s timeout)
-  const syncTimeout=setTimeout(()=>{
-    console.warn('Firebase sync timeout — using local data');
-  },8000);
+  // Show sync banner and wait for Firebase BEFORE rendering
+  _showSyncBanner('⏳ Sincronizando dados...','#6B7280');
 
   Promise.race([
     fbLoadBase(profile.id),
-    new Promise((_,rej)=>setTimeout(()=>rej(new Error('timeout')),8000))
+    new Promise((_,rej)=>setTimeout(()=>rej(new Error('timeout')),10000))
   ]).then(async base=>{
-    clearTimeout(syncTimeout);
     if(base&&Object.keys(base).length){
       if(base.cats)sv(uKey('cats'),base.cats);
       if(base.pays)sv(uKey('pays'),base.pays);
@@ -1205,20 +1219,26 @@ function loginUser(profile){
       if(base.fcFlags)sv(uKey('fc_flags'),base.fcFlags);
       if(base.contas)sv(uKey('contas'),base.contas);
     }
+    // Load current month data from Firebase
     const md=await fbGetMonth(profile.id,yr,mo);
     if(md&&md.expenses)sv(mKey(yr,mo),md);
+    // Load conta transactions
     const contas=base?.contas||ld(uKey('contas'),[]);
     for(const c of contas){
       const txs=await fbGetContaTx(profile.id,c.id);
       if(txs&&txs.length)sv(getContaTxKey(c.id),txs);
     }
     state=loadState(); pays=ld(uKey('pays'),DEF_PAYS); selectedPay=null; selectedConta=null;
-    // Refresh current page silently
-    const active=document.querySelector('.page.active')?.id?.replace('page-','');
-    if(active)goTo(active);
+    _showSyncBanner('✅ Dados sincronizados!','#1A9E6E');
+    setTimeout(_hideSyncBanner,2000);
+    goTo('limites');
   }).catch(err=>{
-    clearTimeout(syncTimeout);
-    console.warn('Firebase sync failed, using local data:',err.message);
+    console.warn('Firebase sync failed:',err.message);
+    // Fallback: load local data and show anyway
+    state=loadState(); pays=ld(uKey('pays'),DEF_PAYS); selectedPay=null; selectedConta=null;
+    _showSyncBanner('⚠️ Offline — dados locais','#D97706');
+    setTimeout(_hideSyncBanner,3000);
+    goTo('limites');
   });
 }
 function switchProfile(){
@@ -1548,6 +1568,7 @@ function openContaModal(editId){
     </select></div>
     <div class="mf"><label>Ícone</label><input id="bc-icon" value="${c?.icon||'🏦'}" maxlength="2" style="width:60px;text-align:center;font-size:18px"></div>
     <div class="mf"><label>Cor</label><input id="bc-color" type="color" value="${c?.color||'#185FA5'}" style="height:36px;padding:2px;width:60px"></div>
+    <div class="mf"><label>💹 Valor investido (R$)</label><input id="bc-investido" type="number" min="0" step="0.01" value="${c?.valorInvestido||''}" placeholder="0,00"><div style="font-size:10px;color:var(--text3);margin-top:4px">Valor do saldo desta conta que está investido. Aparece no P&L.</div></div>
     <div class="mbtns">
       ${c?`<button class="md" onclick="deleteConta('${c.id}')">Excluir</button>`:''}
       <button class="mc" onclick="closeModal()">Cancelar</button>
@@ -1564,12 +1585,13 @@ function saveConta(editId){
   const tipo=document.getElementById('bc-tipo').value;
   const icon=document.getElementById('bc-icon').value.trim()||'🏦';
   const color=document.getElementById('bc-color').value;
+  const valorInvestido=parseFloat(document.getElementById('bc-investido').value)||0;
   const contas=getContas();
   if(editId){
     const idx=contas.findIndex(c=>c.id===editId); if(idx===-1)return;
-    contas[idx]={...contas[idx],nome,banco,conta_num,agencia,tipo,icon,color};
+    contas[idx]={...contas[idx],nome,banco,conta_num,agencia,tipo,icon,color,valorInvestido};
   } else {
-    contas.push({id:'c'+Date.now(),nome,banco,conta_num,agencia,tipo,icon,color});
+    contas.push({id:'c'+Date.now(),nome,banco,conta_num,agencia,tipo,icon,color,valorInvestido});
   }
   saveContas(contas); closeModal(); renderBanco(); renderCfg();
 }
@@ -1821,7 +1843,7 @@ function renderRd(){
     recs.forEach((r,i)=>{
       const div=document.createElement('div'); div.className='item-row';
       div.innerHTML=`<span style="font-size:14px;width:20px;text-align:center">${(REC_CATS[r.categoria]||'📦').split(' ')[0]}</span>
-        <div style="flex:1;min-width:0"><div class="iname">${r.descricao}</div><div class="imeta">${r.date}${r.pagamento?' · '+r.pagamento:''}${r.recorrente?' · 🔁 Recorrente':''}</div></div>
+        <div style="flex:1;min-width:0"><div class="iname">${r.descricao}</div><div class="imeta">${r.recorrente?'🔁 Todo dia '+(r.diaRecebimento||1):r.date}${r.pagamento?' · '+r.pagamento:''}</div></div>
         <div style="text-align:right"><div class="ival" style="color:#1D9E75">${fmt(r.valor)}</div><div class="iedit" onclick="openRdEdit('rec',${i})">editar</div></div>`;
       list.appendChild(div);
     });
@@ -1850,7 +1872,8 @@ function openRdEdit(type,idx){
       <div class="mf"><label>Descrição</label><input id="er-d" value="${r.descricao}"></div>
       <div class="mf"><label>Valor (R$)</label><input id="er-v" type="number" value="${r.valor}" min="0" step="0.01"></div>
       <div class="mf"><label>Data</label><input id="er-dt" type="date" value="${r.date}"></div>
-      <div class="mf"><label>Recorrente?</label><select id="er-r"><option value="0" ${!r.recorrente?'selected':''}>Não</option><option value="1" ${r.recorrente?'selected':''}>Sim</option></select></div>
+      <div class="mf"><label>Recorrente?</label><select id="er-r" onchange="toggleErDia()"><option value="0" ${!r.recorrente?'selected':''}>Não</option><option value="1" ${r.recorrente?'selected':''}>Sim</option></select></div>
+      <div class="mf" id="er-dia-wrap" style="display:${r.recorrente?'flex':'none'}"><label>Dia do mês que recebe</label><input id="er-dia" type="number" min="1" max="31" value="${r.diaRecebimento||''}" placeholder="Ex: 5"></div>
       <div class="mbtns"><button class="md" onclick="if(confirm('Excluir?')){state.receitas.splice(${idx},1);saveState(state);closeModal();renderRd();}">Excluir</button><button class="mc" onclick="closeModal()">Cancelar</button><button class="ms" onclick="saveRec(${idx})">Salvar</button></div>
     </div></div>`;
   } else {const d=state.despesasFixas[idx];
@@ -1864,13 +1887,21 @@ function openRdEdit(type,idx){
     </div></div>`;
   }
 }
-function saveRec(i){const r=state.receitas[i];r.descricao=document.getElementById('er-d').value.trim()||r.descricao;r.valor=parseFloat(document.getElementById('er-v').value)||r.valor;r.date=document.getElementById('er-dt').value||r.date;r.recorrente=document.getElementById('er-r').value==='1';saveState(state);closeModal();renderRd();}
+function toggleErDia(){document.getElementById('er-dia-wrap').style.display=document.getElementById('er-r').value==='1'?'flex':'none';}
+function saveRec(i){const r=state.receitas[i];r.descricao=document.getElementById('er-d').value.trim()||r.descricao;r.valor=parseFloat(document.getElementById('er-v').value)||r.valor;r.date=document.getElementById('er-dt').value||r.date;r.recorrente=document.getElementById('er-r').value==='1';r.diaRecebimento=r.recorrente?(parseInt(document.getElementById('er-dia').value)||1):null;saveState(state);closeModal();renderRd();}
 function saveFix(i){const d=state.despesasFixas[i];d.descricao=document.getElementById('ed-d').value.trim()||d.descricao;d.valorParcela=parseFloat(document.getElementById('ed-v').value)||d.valorParcela;d.diaVencimento=parseInt(document.getElementById('ed-due').value)||d.diaVencimento;d.observacao=document.getElementById('ed-n').value;saveState(state);closeModal();renderRd();}
 
 /* ── P&L ── */
 /* ── P&L ── */
 let _plTab='mes', _plYear=new Date().getFullYear();
 
+let _plDetailed=true;
+function togglePLDetail(){
+  _plDetailed=!_plDetailed;
+  const btn=document.getElementById('pl-toggle-detail');
+  btn.textContent=_plDetailed?'📋 Resumido':'📋 Detalhado';
+  if(_plTab==='anual') renderPLAnual(); else renderPLMes();
+}
 function switchPLTab(tab){
   _plTab=tab;
   document.getElementById('pl-tab-mes').classList.toggle('active',tab==='mes');
@@ -1903,15 +1934,27 @@ function _getMesData(y, m){
   return md;
 }
 
-// Gastos de limite de um mês (crédito vai pro próximo, à vista fica no mês)
+// Gastos de limite de um mês
+// passado: valor real | atual: max(real, limite) por cat | futuro: limite
 function _getGastosLimiteMes(y, m){
   const md=_getMesData(y,m);
-  const exps=md.expenses||[];
   const cats=ld(uKey('cats'),DEF_CATS);
   const tLimit=cats.reduce((a,c)=>a+c.subcategories.reduce((b,s)=>b+s.limit,0),0);
   const spentMap=md.spentMap||{};
   const tSpent=Object.values(spentMap).reduce((a,v)=>a+v,0);
-  return{tSpent,tLimit,exps,spentMap};
+  const st=_mesSt(y,m);
+  // For atual: each cat uses max(real, limit)
+  let tEfetivo=tSpent;
+  if(st==='atual'){
+    tEfetivo=cats.reduce((a,c)=>{
+      const catSpent=c.subcategories.reduce((b,s)=>b+(spentMap[c.id+'_'+s.id]||0),0);
+      const catLimit=c.subcategories.reduce((b,s)=>b+s.limit,0);
+      return a+Math.max(catSpent,catLimit);
+    },0);
+  } else if(st==='futuro'){
+    tEfetivo=tLimit;
+  }
+  return{tSpent,tLimit,tEfetivo,spentMap};
 }
 
 // Receitas de um mês específico (recorrentes sempre + únicas do mês)
@@ -1979,60 +2022,120 @@ function renderPLMes(){
   const totalAvista=avistaMes.reduce((a,e)=>a+e.amount,0);
   const fixMes=getDespesasFixasMes();
   const totalFix=fixMes.reduce((a,d)=>a+d.valorParcela,0);
+  // Gastos de limite: usa max(real, limite) por categoria
+  const cats=ld(uKey('cats'),DEF_CATS);
+  const spentMap={}; state.cats.forEach(c=>c.subcategories.forEach(s=>{spentMap[c.id+'_'+s.id]=s.spent;}));
+  const totalLimEfetivo=cats.reduce((a,c)=>{
+    const catSpent=c.subcategories.reduce((b,s)=>b+(spentMap[c.id+'_'+s.id]||0),0);
+    const catLimit=c.subcategories.reduce((b,s)=>b+s.limit,0);
+    return a+Math.max(catSpent,catLimit);
+  },0);
   const totalDesp=totalFat+totalAvista+totalFix;
-  const saldo=totalRec-totalDesp;
-  const tSpentLimit=state.cats.reduce((a,c)=>a+cSpent(c),0);
+  const saldo=totalRec-totalDesp-totalLimEfetivo;
+  // Investimentos
+  const contas=getContas();
+  const totalInvestido=contas.reduce((a,c)=>a+(c.valorInvestido||0),0);
 
   document.getElementById('pl-hero').innerHTML=`
     <div class="plhc"><div class="plhl">Receitas</div><div class="plhv" style="color:#1D9E75">${fmt(totalRec)}</div></div>
-    <div class="plhc"><div class="plhl">Total despesas</div><div class="plhv" style="color:#E24B4A">${fmt(totalDesp)}</div><div class="plhs">Fatura+Avista+Fixas</div></div>
+    <div class="plhc"><div class="plhl">Total despesas</div><div class="plhv" style="color:#E24B4A">${fmt(totalDesp+totalLimEfetivo)}</div><div class="plhs">Limite+Faturas+Fixas</div></div>
     <div class="plhc"><div class="plhl">Saldo do mês</div><div class="plhv" style="color:${saldo>=0?'#1D9E75':'#E24B4A'}">${fmt(saldo,true)}</div></div>
-    <div class="plhc"><div class="plhl">Gasto limite (→ próx. mês)</div><div class="plhv" style="color:#BA7517">${fmt(tSpentLimit)}</div><div class="plhs">Fatura em ${MONTHS[mo===11?0:mo+1]}</div></div>`;
+    <div class="plhc"><div class="plhl">Patrimônio</div><div class="plhv" style="color:#7C3AED">${fmt(saldo+totalInvestido)}</div><div class="plhs">Saldo + Investido</div></div>`;
 
   let pm=mo-1,py=yr; if(pm<0){pm=11;py=yr-1;}
-  document.getElementById('pl-note').innerHTML=`ℹ️ Fatura de crédito = gastos de <strong>${MONTHS[pm]} ${py}</strong> com vencimento neste mês.`;
+  document.getElementById('pl-note').innerHTML=`ℹ️ Fatura de crédito = gastos de <strong>${MONTHS[pm]} ${py}</strong> com vencimento neste mês. Gastos de limite usam o maior valor entre real e limite.`;
 
   let html=`<div class="plth"><div>${MONTHS[mo].charAt(0).toUpperCase()+MONTHS[mo].slice(1)} ${yr}</div><div>Valor</div><div>% receita</div><div>Saldo acum.</div></div>`;
   let acum=0;
 
+  // ── RECEITAS ──
   html+=`<div class="plr shdr"><div>💚 Receitas</div><div></div><div></div><div></div></div>`;
-  const recByCat={};
-  recMes.forEach(r=>{recByCat[r.categoria]=(recByCat[r.categoria]||0)+r.valor;});
-  Object.entries(recByCat).forEach(([cat,val])=>{acum+=val;
-    html+=`<div class="plr indent"><div>${REC_CATS[cat]||cat}</div><div style="color:#1D9E75">${fmt(val)}</div><div>${totalRec?Math.round(val/totalRec*100)+'%':'-'}</div><div style="color:#1D9E75">${fmt(acum)}</div></div>`;
-  });
+  if(_plDetailed){
+    const recByCat={};
+    recMes.forEach(r=>{recByCat[r.categoria]=(recByCat[r.categoria]||0)+r.valor;});
+    Object.entries(recByCat).forEach(([cat,val])=>{acum+=val;
+      html+=`<div class="plr indent"><div>${REC_CATS[cat]||cat}</div><div style="color:#1D9E75">${fmt(val)}</div><div>${totalRec?Math.round(val/totalRec*100)+'%':'-'}</div><div style="color:#1D9E75">${fmt(acum)}</div></div>`;
+    });
+  } else { acum+=totalRec; }
   html+=`<div class="plr total"><div>Total receitas</div><div style="color:#1D9E75">${fmt(totalRec)}</div><div>100%</div><div style="color:#1D9E75">${fmt(totalRec)}</div></div>`;
 
+  // ── GASTOS DE LIMITE ──
+  html+=`<div class="plr shdr"><div>🛒 Gastos (limite / crédito)</div><div></div><div></div><div></div></div>`;
+  if(_plDetailed){
+    cats.forEach(cat=>{
+      const catSpent=cat.subcategories.reduce((b,s)=>b+(spentMap[cat.id+'_'+s.id]||0),0);
+      const catLimit=cat.subcategories.reduce((b,s)=>b+s.limit,0);
+      const catEfetivo=Math.max(catSpent,catLimit);
+      if(catLimit===0&&catSpent===0)return;
+      const overLimit=catSpent>catLimit;
+      acum-=catEfetivo;
+      const overSpan=overLimit?' <span style="color:#E24B4A;font-size:9px">&#9650; estourou</span>':''; html+=`<div class="plr indent"><div>${cat.icon} ${cat.name}${overSpan}</div><div style="color:${overLimit?'#E24B4A':'#BA7517'}">${fmt(catEfetivo)}</div><div>${totalRec?Math.round(catEfetivo/totalRec*100)+'%':'-'}</div><div style="color:${acum>=0?'#1D9E75':'#E24B4A'}">${fmt(acum)}</div></div>`;
+    });
+  } else { acum-=totalLimEfetivo; }
+  html+=`<div class="plr total"><div>Total gastos limite</div><div style="color:#BA7517">${fmt(totalLimEfetivo)}</div><div>${totalRec?Math.round(totalLimEfetivo/totalRec*100)+'%':'-'}</div><div></div></div>`;
+
+  // ── FATURA ──
   if(faturas.length){
     html+=`<div class="plr shdr"><div>💳 Fatura cartão (gastos de ${MONTHS[pm]}/${py})</div><div></div><div></div><div></div></div>`;
-    faturas.forEach(f=>{acum-=f.total;
-      html+=`<div class="plr indent"><div>${f.payment} <span style="color:var(--text3);font-size:10px">dia ${f.diaFatura}</span></div><div style="color:#E24B4A">${fmt(f.total)}</div><div>${totalRec?Math.round(f.total/totalRec*100)+'%':'-'}</div><div style="color:${acum>=0?'#1D9E75':'#E24B4A'}">${fmt(acum)}</div></div>`;
-    });
+    if(_plDetailed){
+      faturas.forEach(f=>{acum-=f.total;
+        html+=`<div class="plr indent"><div>${f.payment} <span style="color:var(--text3);font-size:10px">dia ${f.diaFatura}</span></div><div style="color:#E24B4A">${fmt(f.total)}</div><div>${totalRec?Math.round(f.total/totalRec*100)+'%':'-'}</div><div style="color:${acum>=0?'#1D9E75':'#E24B4A'}">${fmt(acum)}</div></div>`;
+      });
+    } else { acum-=totalFat; }
     html+=`<div class="plr total"><div>Total faturas</div><div style="color:#E24B4A">${fmt(totalFat)}</div><div>${totalRec?Math.round(totalFat/totalRec*100)+'%':'-'}</div><div></div></div>`;
   }
+
+  // ── À VISTA ──
   if(avistaMes.length){
     html+=`<div class="plr shdr"><div>💵 Gastos à vista (débito/pix)</div><div></div><div></div><div></div></div>`;
-    const avc={};
-    avistaMes.forEach(e=>{const cat=state.cats.find(c=>c.id===e.catId);const k=cat?.name||e.catId;avc[k]=(avc[k]||0)+e.amount;});
-    Object.entries(avc).forEach(([cat,val])=>{acum-=val;
-      html+=`<div class="plr indent"><div>${cat}</div><div style="color:#E24B4A">${fmt(val)}</div><div>${totalRec?Math.round(val/totalRec*100)+'%':'-'}</div><div style="color:${acum>=0?'#1D9E75':'#E24B4A'}">${fmt(acum)}</div></div>`;
-    });
+    if(_plDetailed){
+      const avc={};
+      avistaMes.forEach(e=>{const cat=state.cats.find(c=>c.id===e.catId);const k=cat?.name||e.catId;avc[k]=(avc[k]||0)+e.amount;});
+      Object.entries(avc).forEach(([cat,val])=>{acum-=val;
+        html+=`<div class="plr indent"><div>${cat}</div><div style="color:#E24B4A">${fmt(val)}</div><div>${totalRec?Math.round(val/totalRec*100)+'%':'-'}</div><div style="color:${acum>=0?'#1D9E75':'#E24B4A'}">${fmt(acum)}</div></div>`;
+      });
+    } else { acum-=totalAvista; }
     html+=`<div class="plr total"><div>Total à vista</div><div style="color:#E24B4A">${fmt(totalAvista)}</div><div>${totalRec?Math.round(totalAvista/totalRec*100)+'%':'-'}</div><div></div></div>`;
   }
+
+  // ── FIXAS ──
   if(fixMes.length){
     html+=`<div class="plr shdr"><div>🔴 Despesas fixas / parceladas</div><div></div><div></div><div></div></div>`;
-    fixMes.forEach(d=>{acum-=d.valorParcela;
-      const parc=d.totalParcelas?` (${d.parcelaAtual}/${d.totalParcelas})`:'';
-      html+=`<div class="plr indent"><div>${d.descricao}${parc}</div><div style="color:#E24B4A">${fmt(d.valorParcela)}</div><div>${totalRec?Math.round(d.valorParcela/totalRec*100)+'%':'-'}</div><div style="color:${acum>=0?'#1D9E75':'#E24B4A'}">${fmt(acum)}</div></div>`;
-    });
+    if(_plDetailed){
+      fixMes.forEach(d=>{acum-=d.valorParcela;
+        const parc=d.totalParcelas?` (${d.parcelaAtual}/${d.totalParcelas})`:'';
+        html+=`<div class="plr indent"><div>${d.descricao}${parc}</div><div style="color:#E24B4A">${fmt(d.valorParcela)}</div><div>${totalRec?Math.round(d.valorParcela/totalRec*100)+'%':'-'}</div><div style="color:${acum>=0?'#1D9E75':'#E24B4A'}">${fmt(acum)}</div></div>`;
+      });
+    } else { acum-=totalFix; }
     html+=`<div class="plr total"><div>Total despesas fixas</div><div style="color:#E24B4A">${fmt(totalFix)}</div><div>${totalRec?Math.round(totalFix/totalRec*100)+'%':'-'}</div><div></div></div>`;
   }
-  html+=`<div class="plr saldo" style="background:${saldo>=0?'#EAF3DE':'#FCEBEB'}">
-    <div style="color:${saldo>=0?'#27500A':'#A32D2D'}">💰 Saldo líquido do mês</div>
-    <div style="color:${saldo>=0?'#1D9E75':'#E24B4A'};font-size:15px">${fmt(saldo,true)}</div>
-    <div style="color:${saldo>=0?'#27500A':'#A32D2D'}">${totalRec?Math.round(Math.abs(saldo)/totalRec*100)+'%':'-'}</div>
-    <div style="color:${saldo>=0?'#1D9E75':'#E24B4A'}">${fmt(saldo,true)}</div>
+
+  // ── SALDO ──
+  const saldoLiq=acum;
+  html+=`<div class="plr saldo" style="background:${saldoLiq>=0?'#EAF3DE':'#FCEBEB'}">
+    <div style="color:${saldoLiq>=0?'#27500A':'#A32D2D'}">💰 Saldo líquido do mês</div>
+    <div style="color:${saldoLiq>=0?'#1D9E75':'#E24B4A'};font-size:15px">${fmt(saldoLiq,true)}</div>
+    <div style="color:${saldoLiq>=0?'#27500A':'#A32D2D'}">${totalRec?Math.round(Math.abs(saldoLiq)/totalRec*100)+'%':'-'}</div>
+    <div style="color:${saldoLiq>=0?'#1D9E75':'#E24B4A'}">${fmt(saldoLiq,true)}</div>
   </div>`;
+
+  // ── INVESTIMENTOS ──
+  if(totalInvestido>0){
+    html+=`<div class="plr shdr"><div>💹 Patrimônio</div><div></div><div></div><div></div></div>`;
+    if(_plDetailed){
+      contas.filter(c=>c.valorInvestido>0).forEach(c=>{
+        html+=`<div class="plr indent"><div>${c.icon} ${c.nome}</div><div style="color:#7C3AED">${fmt(c.valorInvestido)}</div><div>—</div><div></div></div>`;
+      });
+    }
+    html+=`<div class="plr total"><div>Total investido</div><div style="color:#7C3AED">${fmt(totalInvestido)}</div><div>—</div><div></div></div>`;
+    const patrimonio=saldoLiq+totalInvestido;
+    html+=`<div class="plr saldo" style="background:rgba(124,58,237,0.06)">
+      <div style="color:#5B21B6;font-weight:700">🏦 Patrimônio (saldo + investido)</div>
+      <div style="color:#7C3AED;font-size:15px;font-weight:800">${fmt(patrimonio,true)}</div>
+      <div>—</div><div></div>
+    </div>`;
+  }
+
   document.getElementById('pl-table').innerHTML=html;
 }
 
@@ -2041,27 +2144,31 @@ function renderPLAnual(){
   const y=_plYear;
   document.getElementById('pl-year-lbl').textContent=y;
 
-  // Linhas de receita: categorias únicas
-  const recCats=Object.keys(REC_CATS);
-  // Linhas de despesa fixa: todas as despesas fixas ativas em algum mês do ano
+  const cats=ld(uKey('cats'),DEF_CATS);
+  const tLimit=cats.reduce((a,c)=>a+c.subcategories.reduce((b,s)=>b+s.limit,0),0);
   const todasFixas=ld(uKey('despesas_fixas'),[]);
+  const contasList=getContas();
+  const totalInvestido=contasList.reduce((a,c)=>a+(c.valorInvestido||0),0);
 
-  // Hero: totais anuais projetados
+  // Helper: gastos efetivos de uma categoria num mês (passado=real, atual=max(real,lim), futuro=lim)
+  function _catEfetivo(cat, y, m){
+    const st=_mesSt(y,m);
+    const catLimit=cat.subcategories.reduce((b,s)=>b+s.limit,0);
+    if(st==='futuro') return catLimit;
+    const spentMap=_getMesData(y,m).spentMap||{};
+    const catSpent=cat.subcategories.reduce((b,s)=>b+(spentMap[cat.id+'_'+s.id]||0),0);
+    if(st==='atual') return Math.max(catSpent,catLimit);
+    return catSpent; // passado: valor real
+  }
+
+  // Hero totais
   let totalRecAnual=0, totalDespAnual=0;
   for(let m=0;m<12;m++){
-    const st=_mesSt(y,m);
-    const recs=_getReceitasMes(y,m);
-    totalRecAnual+=recs.reduce((a,r)=>a+r.valor,0);
-    const fat=_getFaturaMes(y,m);
-    totalDespAnual+=fat.reduce((a,f)=>a+f.total,0);
-    const avist=_getAvistaMes(y,m);
-    totalDespAnual+=avist.reduce((a,e)=>a+e.amount,0);
-    const fixas=_getDespesasFixasMes(y,m);
-    totalDespAnual+=fixas.reduce((a,d)=>a+d.valorParcela,0);
-    // Gastos de limite: meses passados = real, atual = real, futuro = limite
-    const {tSpent,tLimit}=_getGastosLimiteMes(y,m);
-    if(st==='futuro') totalDespAnual+=tLimit;
-    // Note: for passado/atual, limite já está capturado na fatura do mês seguinte
+    totalRecAnual+=_getReceitasMes(y,m).reduce((a,r)=>a+r.valor,0);
+    totalDespAnual+=_getFaturaMes(y,m).reduce((a,f)=>a+f.total,0);
+    totalDespAnual+=_getAvistaMes(y,m).reduce((a,e)=>a+e.amount,0);
+    totalDespAnual+=_getDespesasFixasMes(y,m).reduce((a,d)=>a+d.valorParcela,0);
+    totalDespAnual+=cats.reduce((a,c)=>a+_catEfetivo(c,y,m),0);
   }
   const saldoAnual=totalRecAnual-totalDespAnual;
 
@@ -2069,42 +2176,37 @@ function renderPLAnual(){
     <div class="plhc"><div class="plhl">Receitas ${y}</div><div class="plhv" style="color:#1D9E75">${fmt(totalRecAnual)}</div><div class="plhs">Projeção anual</div></div>
     <div class="plhc"><div class="plhl">Despesas ${y}</div><div class="plhv" style="color:#E24B4A">${fmt(totalDespAnual)}</div><div class="plhs">Projeção anual</div></div>
     <div class="plhc"><div class="plhl">Saldo projetado</div><div class="plhv" style="color:${saldoAnual>=0?'#1D9E75':'#E24B4A'}">${fmt(saldoAnual,true)}</div></div>
-    <div class="plhc"><div class="plhl">Média mensal</div><div class="plhv" style="color:${saldoAnual>=0?'#1D9E75':'#E24B4A'}">${fmt(Math.round(saldoAnual/12))}</div><div class="plhs">Saldo / 12 meses</div></div>`;
+    <div class="plhc"><div class="plhl">Média mensal</div><div class="plhv" style="color:${saldoAnual>=0?'#1D9E75':'#E24B4A'}">${fmt(Math.round(saldoAnual/12))}</div><div class="plhs">Saldo / 12</div></div>`;
 
   document.getElementById('pl-note').innerHTML=
-    `ℹ️ <strong>Meses passados</strong>: valor real fechado · <strong>Mês atual</strong>: real até hoje · <strong>Meses futuros</strong>: projeção pelo limite · <em style="color:var(--amber)">itálico = projeção</em>`;
+    `ℹ️ <strong>Passado</strong>: valor real · <strong>Mês atual</strong>: max(real, limite) · <strong>Futuro</strong>: limite · <em style="color:var(--amber)">itálico = projeção</em>`;
 
   const mesLabels=MONTHS.map((m,i)=>{
     const st=_mesSt(y,i);
-    const isCur=st==='atual';
-    return`<th class="${isCur?'mes-atual':''}" style="${st==='futuro'?'color:var(--text3)':''}">${m.slice(0,3).toUpperCase()}${isCur?' ◀':''}</th>`;
+    return`<th class="${st==='atual'?'mes-atual':''}" style="${st==='futuro'?'color:var(--text3)':''}">${MONTHS[i].slice(0,3).toUpperCase()}${st==='atual'?' ◀':''}</th>`;
   }).join('');
 
   let rows='';
-
-  // Helper: cell value formatted with color class
-  const cell=(val,st,isNeg=false,forceProj=false)=>{
-    const proj=forceProj||st==='futuro';
-    const cls=proj?'proj':(val>0&&!isNeg?'pos':val<0||isNeg?'neg':'');
-    return`<td class="${st==='atual'?'mes-atual':''} ${cls}">${val===0?'—':fmt(Math.abs(val))}${isNeg&&val>0?'':''}</td>`;
+  const cell=(val,st,isNeg=false)=>{
+    const proj=st==='futuro';
+    const cls=proj?'proj':(val===0?'':(isNeg?'neg':'pos'));
+    return`<td class="${st==='atual'?'mes-atual':''} ${cls}">${val===0?'—':fmt(val)}</td>`;
   };
 
-  // ── Receitas ──
+  // ── RECEITAS ──
   rows+=`<tr class="row-hdr"><td>💚 RECEITAS</td>${Array(12).fill('<td></td>').join('')}<td></td></tr>`;
-  recCats.forEach(catKey=>{
-    const label=REC_CATS[catKey];
-    const vals=[];
-    let rowTotal=0;
-    for(let m=0;m<12;m++){
-      const recs=_getReceitasMes(y,m).filter(r=>r.categoria===catKey);
-      const v=recs.reduce((a,r)=>a+r.valor,0);
-      vals.push({v,st:_mesSt(y,m)});
-      rowTotal+=v;
-    }
-    if(rowTotal===0)return;
-    rows+=`<tr class="row-indent"><td>${label}</td>${vals.map(({v,st})=>cell(v,st)).join('')}<td class="${rowTotal>0?'pos':''}">${fmt(rowTotal)}</td></tr>`;
-  });
-  // Total receitas
+  const recCats=Object.keys(REC_CATS);
+  if(_plDetailed){
+    recCats.forEach(catKey=>{
+      const vals=[]; let rowTotal=0;
+      for(let m=0;m<12;m++){
+        const v=_getReceitasMes(y,m).filter(r=>r.categoria===catKey).reduce((a,r)=>a+r.valor,0);
+        vals.push({v,st:_mesSt(y,m)}); rowTotal+=v;
+      }
+      if(rowTotal===0)return;
+      rows+=`<tr class="row-indent"><td>${REC_CATS[catKey]}</td>${vals.map(({v,st})=>cell(v,st)).join('')}<td class="pos">${fmt(rowTotal)}</td></tr>`;
+    });
+  }
   const totalRecRow=[];
   for(let m=0;m<12;m++){
     const v=_getReceitasMes(y,m).reduce((a,r)=>a+r.valor,0);
@@ -2113,119 +2215,84 @@ function renderPLAnual(){
   const totRecAnual=totalRecRow.reduce((a,x)=>a+x.v,0);
   rows+=`<tr class="row-total"><td>Total receitas</td>${totalRecRow.map(({v,st})=>`<td class="${st==='atual'?'mes-atual':''} pos">${v===0?'—':fmt(v)}</td>`).join('')}<td class="pos">${fmt(totRecAnual)}</td></tr>`;
 
-  // ── Gastos de Limite (Fatura) ──
-  rows+=`<tr class="row-hdr"><td>💳 GASTOS (LIMITE → FATURA)</td>${Array(12).fill('<td></td>').join('')}<td></td></tr>`;
-  // Para cada mês, a fatura = gastos de crédito do mês anterior
-  // Meses passados/atual: valor real; futuro: limite total
-  const cats=ld(uKey('cats'),DEF_CATS);
-  const tLimit=cats.reduce((a,c)=>a+c.subcategories.reduce((b,s)=>b+s.limit,0),0);
-
-  // Por categoria de limite
-  cats.forEach(cat=>{
-    const catLimit=cat.subcategories.reduce((a,s)=>a+s.limit,0);
-    if(catLimit===0)return;
-    const vals=[];
-    let rowTotal=0;
-    for(let m=0;m<12;m++){
-      const st=_mesSt(y,m);
-      let v=0;
-      if(st==='futuro'){
-        // Projeção: usa o limite
-        v=catLimit;
-      } else {
-        // Real: gastos registrados neste mês para esta categoria
-        const spentMap=_getMesData(y,m).spentMap||{};
-        v=cat.subcategories.reduce((a,s)=>a+(spentMap[cat.id+'_'+s.id]||0),0);
-        // Se gastou abaixo do limite, mostra o real; se acima, mostra o real (já ultrapassou)
-        // Regra: mês fechado = valor real final
+  // ── GASTOS LIMITE ──
+  rows+=`<tr class="row-hdr"><td>🛒 GASTOS (LIMITE / REAL)</td>${Array(12).fill('<td></td>').join('')}<td></td></tr>`;
+  if(_plDetailed){
+    cats.forEach(cat=>{
+      const catLimit=cat.subcategories.reduce((a,s)=>a+s.limit,0);
+      if(catLimit===0)return;
+      const vals=[]; let rowTotal=0;
+      for(let m=0;m<12;m++){
+        const st=_mesSt(y,m);
+        const v=_catEfetivo(cat,y,m);
+        const overLimit=st!=='futuro'&&(()=>{const sp=cat.subcategories.reduce((b,s)=>b+(_getMesData(y,m).spentMap?.[cat.id+'_'+s.id]||0),0);return sp>catLimit;})();
+        vals.push({v,st,over:overLimit}); rowTotal+=v;
       }
-      vals.push({v,st,proj:st==='futuro'});
-      rowTotal+=v;
-    }
-    rows+=`<tr class="row-indent"><td>${cat.icon} ${cat.name}</td>${vals.map(({v,st,proj})=>`<td class="${st==='atual'?'mes-atual':''} ${proj?'proj':'neg'}">${v===0?'—':fmt(v)}</td>`).join('')}<td class="neg">${fmt(rowTotal)}</td></tr>`;
-  });
-
-  // Total limite
+      rows+=`<tr class="row-indent"><td>${cat.icon} ${cat.name}</td>${vals.map(({v,st,over})=>`<td class="${st==='atual'?'mes-atual':''} ${st==='futuro'?'proj':(over?'neg':'')}">${v===0?'—':fmt(v)}${over?' ▲':''}</td>`).join('')}<td class="neg">${fmt(rowTotal)}</td></tr>`;
+    });
+  }
   const totLimRow=[];
   for(let m=0;m<12;m++){
     const st=_mesSt(y,m);
-    let v=0;
-    if(st==='futuro'){
-      v=tLimit;
-    } else {
-      const spentMap=_getMesData(y,m).spentMap||{};
-      v=Object.values(spentMap).reduce((a,x)=>a+x,0);
-    }
-    totLimRow.push({v,st,proj:st==='futuro'});
+    const v=cats.reduce((a,c)=>a+_catEfetivo(c,y,m),0);
+    totLimRow.push({v,st});
   }
   const totLimAnual=totLimRow.reduce((a,x)=>a+x.v,0);
-  rows+=`<tr class="row-total"><td>Total gastos limite</td>${totLimRow.map(({v,st,proj})=>`<td class="${st==='atual'?'mes-atual':''} ${proj?'proj':'neg'}">${v===0?'—':fmt(v)}</td>`).join('')}<td class="neg">${fmt(totLimAnual)}</td></tr>`;
+  rows+=`<tr class="row-total"><td>Total gastos</td>${totLimRow.map(({v,st})=>`<td class="${st==='atual'?'mes-atual':''} ${st==='futuro'?'proj':'neg'}">${v===0?'—':fmt(v)}</td>`).join('')}<td class="neg">${fmt(totLimAnual)}</td></tr>`;
 
-  // ── Despesas Fixas ──
+  // ── DESPESAS FIXAS ──
   const todasAtivas=todasFixas.filter(d=>{
-    // Ativa em algum mês do ano
     for(let m=0;m<12;m++){if(_getDespesasFixasMes(y,m).find(x=>x.id===d.id))return true;}
     return false;
   });
   if(todasAtivas.length){
     rows+=`<tr class="row-hdr"><td>🔴 DESPESAS FIXAS</td>${Array(12).fill('<td></td>').join('')}<td></td></tr>`;
-    todasAtivas.forEach(d=>{
-      const vals=[];
-      let rowTotal=0;
-      for(let m=0;m<12;m++){
-        const st=_mesSt(y,m);
-        const ativa=_getDespesasFixasMes(y,m).find(x=>x.id===d.id);
-        const v=ativa?ativa.valorParcela:0;
-        vals.push({v,st,proj:st==='futuro'});
-        rowTotal+=v;
-      }
-      const parc=d.totalParcelas?` (${d.totalParcelas}x)`:'';
-      rows+=`<tr class="row-indent"><td>${d.descricao}${parc}</td>${vals.map(({v,st,proj})=>`<td class="${st==='atual'?'mes-atual':''} ${v>0?(proj?'proj':'neg'):''}">${v===0?'—':fmt(v)}</td>`).join('')}<td class="neg">${rowTotal>0?fmt(rowTotal):'—'}</td></tr>`;
-    });
+    if(_plDetailed){
+      todasAtivas.forEach(d=>{
+        const vals=[]; let rowTotal=0;
+        for(let m=0;m<12;m++){
+          const st=_mesSt(y,m);
+          const ativa=_getDespesasFixasMes(y,m).find(x=>x.id===d.id);
+          const v=ativa?ativa.valorParcela:0;
+          vals.push({v,st}); rowTotal+=v;
+        }
+        const parc=d.totalParcelas?` (${d.totalParcelas}x)`:'';
+        rows+=`<tr class="row-indent"><td>${d.descricao}${parc}</td>${vals.map(({v,st})=>`<td class="${st==='atual'?'mes-atual':''} ${v>0?(st==='futuro'?'proj':'neg'):''}">${v===0?'—':fmt(v)}</td>`).join('')}<td class="neg">${rowTotal>0?fmt(rowTotal):'—'}</td></tr>`;
+      });
+    }
     const totFixRow=[];
     for(let m=0;m<12;m++){
       const v=_getDespesasFixasMes(y,m).reduce((a,d)=>a+d.valorParcela,0);
       totFixRow.push({v,st:_mesSt(y,m)});
     }
     const totFixAnual=totFixRow.reduce((a,x)=>a+x.v,0);
-    rows+=`<tr class="row-total"><td>Total despesas fixas</td>${totFixRow.map(({v,st})=>`<td class="${st==='atual'?'mes-atual':''} ${v>0?'neg':''}">${v===0?'—':fmt(v)}</td>`).join('')}<td class="neg">${fmt(totFixAnual)}</td></tr>`;
+    rows+=`<tr class="row-total"><td>Total despesas fixas</td>${totFixRow.map(({v,st})=>`<td class="${st==='atual'?'mes-atual':''} ${v>0?(st==='futuro'?'proj':'neg'):''}">${v===0?'—':fmt(v)}</td>`).join('')}<td class="neg">${fmt(totFixAnual)}</td></tr>`;
   }
 
-  // ── Saldo mensal ──
+  // ── SALDO MENSAL ──
   rows+=`<tr class="row-hdr"><td>💰 SALDO MENSAL</td>${Array(12).fill('<td></td>').join('')}<td></td></tr>`;
-  const saldoRow=[];
-  let acumAnual=0;
+  const saldoRow=[]; let acumAnual=0;
   for(let m=0;m<12;m++){
     const st=_mesSt(y,m);
     const rec=_getReceitasMes(y,m).reduce((a,r)=>a+r.valor,0);
     const fat=_getFaturaMes(y,m).reduce((a,f)=>a+f.total,0);
     const avist=_getAvistaMes(y,m).reduce((a,e)=>a+e.amount,0);
     const fix=_getDespesasFixasMes(y,m).reduce((a,d)=>a+d.valorParcela,0);
-    let limVal=0;
-    if(st==='futuro'){
-      limVal=tLimit;
-    } else {
-      const spentMap=_getMesData(y,m).spentMap||{};
-      limVal=Object.values(spentMap).reduce((a,x)=>a+x,0);
-    }
-    const desp=fat+avist+fix+(st==='futuro'?limVal:0);
-    const s=rec-desp-(st!=='futuro'?limVal:0);
-    // Simplified: receitas - faturas - avista - fixas
-    const sSimp=rec-fat-avist-fix-(st!=='futuro'?limVal:0);
-    // Actually: saldo = receitas - (fatura do mês = gastos crédito do mês anterior) - avista - fixas
-    // For future: receitas - limite (projeção) - fixas projetadas
-    let saldo;
-    if(st==='futuro'){
-      saldo=rec-tLimit-fix;
-    } else {
-      saldo=rec-fat-avist-fix;
-    }
+    const lim=cats.reduce((a,c)=>a+_catEfetivo(c,y,m),0);
+    const saldo=rec-fat-avist-fix-lim;
     acumAnual+=saldo;
-    saldoRow.push({saldo,st,proj:st==='futuro',acum:acumAnual});
+    saldoRow.push({saldo,st,acum:acumAnual});
   }
   const totSaldoAnual=saldoRow.reduce((a,x)=>a+x.saldo,0);
-  rows+=`<tr class="row-saldo"><td>Saldo do mês</td>${saldoRow.map(({saldo,st,proj})=>`<td class="${st==='atual'?'mes-atual':''} ${proj?'proj':(saldo>=0?'pos':'neg')}" style="font-weight:600">${fmt(saldo,true)}</td>`).join('')}<td class="${totSaldoAnual>=0?'pos':'neg'}" style="font-weight:700">${fmt(totSaldoAnual,true)}</td></tr>`;
-  rows+=`<tr class="row-saldo" style="border-top:2px solid var(--border)"><td style="color:var(--text2);font-size:10px">Saldo acumulado</td>${saldoRow.map(({acum,st,proj})=>`<td class="${st==='atual'?'mes-atual':''} ${proj?'proj':(acum>=0?'pos':'neg')}" style="font-size:10px">${fmt(acum,true)}</td>`).join('')}<td></td></tr>`;
+  rows+=`<tr class="row-saldo"><td>Saldo do mês</td>${saldoRow.map(({saldo,st})=>`<td class="${st==='atual'?'mes-atual':''} ${st==='futuro'?'proj':(saldo>=0?'pos':'neg')}" style="font-weight:600">${fmt(saldo,true)}</td>`).join('')}<td class="${totSaldoAnual>=0?'pos':'neg'}" style="font-weight:700">${fmt(totSaldoAnual,true)}</td></tr>`;
+  rows+=`<tr class="row-saldo" style="border-top:2px solid var(--border)"><td style="color:var(--text2);font-size:10px">Saldo acumulado</td>${saldoRow.map(({acum,st})=>`<td class="${st==='atual'?'mes-atual':''} ${st==='futuro'?'proj':(acum>=0?'pos':'neg')}" style="font-size:10px">${fmt(acum,true)}</td>`).join('')}<td></td></tr>`;
+
+  // ── INVESTIMENTOS ──
+  if(totalInvestido>0){
+    rows+=`<tr class="row-hdr"><td>💹 PATRIMÔNIO</td>${Array(12).fill('<td></td>').join('')}<td></td></tr>`;
+    rows+=`<tr class="row-indent"><td>Total investido (contas)</td>${Array(12).fill(`<td class="pos">${fmt(totalInvestido)}</td>`).join('')}<td class="pos">${fmt(totalInvestido)}</td></tr>`;
+    rows+=`<tr class="row-saldo" style="background:rgba(124,58,237,0.06)"><td style="color:#5B21B6;font-weight:700">🏦 Patrimônio (acum + investido)</td>${saldoRow.map(({acum,st})=>{const pat=acum+totalInvestido;return`<td class="${st==='atual'?'mes-atual':''} ${st==='futuro'?'proj':(pat>=0?'pos':'neg')}" style="font-weight:700;color:#7C3AED">${fmt(pat,true)}</td>`;}).join('')}<td></td></tr>`;
+  }
 
   document.getElementById('pl-anual-table').innerHTML=`
     <thead><tr>
@@ -2235,6 +2302,7 @@ function renderPLAnual(){
     </tr></thead>
     <tbody>${rows}</tbody>`;
 }
+
 
 /* ── FLUXO DE CAIXA ── */
 function fcFlagKey(id){return`${id}_${yr}_${mo}`;}
@@ -2253,8 +2321,8 @@ function renderFC(){
 
   // 1. Receitas do mês
   getReceitasMes().forEach(r=>{
-    const d=r.recorrente?new Date(yr,mo,1):new Date(r.date+'T12:00:00');
-    const day=r.recorrente?1:d.getDate();
+    const d=r.recorrente?new Date(yr,mo,r.diaRecebimento||1):new Date(r.date+'T12:00:00');
+    const day=r.recorrente?Math.min(r.diaRecebimento||1,daysInMonth):d.getDate();
     events.push({day,type:'rec',color:'#1D9E75',icon:'💚',name:r.descricao,meta:(REC_CATS[r.categoria]||'').split(' ').slice(1).join(' ')+(r.pagamento?' · '+r.pagamento:''),val:r.valor,id:'rec_'+r.id});
   });
 
@@ -2492,14 +2560,21 @@ function submitGasto(){
   }
   document.getElementById('g-val').value=''; document.getElementById('g-note').value='';
 }
+function toggleDiaRecebimento(){
+  const rec=document.getElementById('r-rec').value==='1';
+  document.getElementById('r-dia-wrap').style.display=rec?'flex':'none';
+}
 function submitReceita(){
   const desc=document.getElementById('r-desc').value.trim(); if(!desc){showToast('r-toast','Informe uma descrição.',true);return;}
   const cat=document.getElementById('r-cat').value; const val=parseFloat(document.getElementById('r-val').value)||0;
   if(!val||val<=0){showToast('r-toast','Informe um valor válido.',true);return;}
   const pay=document.getElementById('r-pay').value; const date=document.getElementById('r-date').value;
-  const rec=document.getElementById('r-rec').value==='1'; const note=document.getElementById('r-note').value.trim();
-  state.receitas.push({id:'r'+Date.now(),descricao:desc,categoria:cat,valor:val,pagamento:pay,date,recorrente:rec,observacao:note});
-  saveState(state); document.getElementById('r-desc').value=''; document.getElementById('r-val').value=''; document.getElementById('r-note').value='';
+  const rec=document.getElementById('r-rec').value==='1';
+  const diaRecebimento=rec?(parseInt(document.getElementById('r-dia').value)||1):null;
+  const note=document.getElementById('r-note').value.trim();
+  state.receitas.push({id:'r'+Date.now(),descricao:desc,categoria:cat,valor:val,pagamento:pay,date,recorrente:rec,diaRecebimento,observacao:note});
+  saveState(state); document.getElementById('r-desc').value=''; document.getElementById('r-val').value=''; document.getElementById('r-note').value=''; document.getElementById('r-dia').value='';
+  document.getElementById('r-dia-wrap').style.display='none'; document.getElementById('r-rec').value='0';
   showToast('r-toast',`✅ Receita de ${fmt(val)} registrada!`);
 }
 function submitDespesaFixa(){
