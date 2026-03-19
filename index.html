@@ -522,6 +522,33 @@ body{
 .md{padding:9px 16px;background:transparent;border:1px solid rgba(220,38,38,0.3);border-radius:var(--r);font-size:11px;cursor:pointer;color:var(--red);margin-right:auto;font-family:var(--font);font-weight:600;transition:background 0.15s}
 .md:hover{background:var(--red-bg)}
 </style>
+<!-- Firebase SDK -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+  import { getFirestore, doc, getDoc, setDoc, collection, getDocs, deleteDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyCmJUxAB2h5wx-U1O24hfrJZt1kbp8TP_Q",
+    authDomain: "ze-financeiro-97924.firebaseapp.com",
+    projectId: "ze-financeiro-97924",
+    storageBucket: "ze-financeiro-97924.firebasestorage.app",
+    messagingSenderId: "16356446112",
+    appId: "1:16356446112:web:d2cafa2dbd0c596a2cdec5"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db  = getFirestore(app);
+
+  // ── Expose DB helpers globally ──
+  window._db = db;
+  window._fbDoc     = (path) => doc(db, ...path.split('/'));
+  window._fbGetDoc  = async (path) => { const s = await getDoc(doc(db,...path.split('/'))); return s.exists()?s.data():null; };
+  window._fbSetDoc  = (path,data) => setDoc(doc(db,...path.split('/')), data);
+  window._fbDelDoc  = (path)      => deleteDoc(doc(db,...path.split('/')));
+  window._fbGetColl = async (path) => { const s = await getDocs(collection(db,...path.split('/'))); const r={}; s.forEach(d=>r[d.id]=d.data()); return r; };
+  window._fbReady   = true;
+  document.dispatchEvent(new Event('firebase-ready'));
+</script>
 </head>
 <body>
 
@@ -843,8 +870,41 @@ let currentUser=null,state=null,pays=[],selectedPay=null,rdTab='rec';
 
 function ld(k,d){try{const v=localStorage.getItem(k);return v?JSON.parse(v):JSON.parse(JSON.stringify(d));}catch(e){return JSON.parse(JSON.stringify(d));}}
 function sv(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch(e){}}
+
+// ── FIREBASE DATA LAYER ──
+// All persistent data lives in Firestore under:
+//   ze/profiles               → {profiles: [...]}
+//   ze/users/{uid}/base       → {cats, pays, receitas, despesasFixas, fcFlags, contas}
+//   ze/users/{uid}/months/{yr_mo} → {spentMap, expenses}
+//   ze/users/{uid}/conta_tx/{contaId} → {txs:[...]}
+
+async function fbGetProfiles(){
+  const d=await window._fbGetDoc('ze/profiles'); return d?.profiles||[];
+}
+async function fbSaveProfiles(profiles){
+  await window._fbSetDoc('ze/profiles',{profiles});
+}
+async function fbLoadBase(uid){
+  return await window._fbGetDoc(`ze/users/${uid}/data/base`)||{};
+}
+async function fbSaveBase(uid,data){
+  await window._fbSetDoc(`ze/users/${uid}/data/base`,data);
+}
+async function fbGetMonth(uid,yr,mo){
+  return await window._fbGetDoc(`ze/users/${uid}/months/${yr}_${mo}`)||{spentMap:{},expenses:[]};
+}
+async function fbSaveMonth(uid,yr,mo,data){
+  await window._fbSetDoc(`ze/users/${uid}/months/${yr}_${mo}`,data);
+}
+async function fbGetContaTx(uid,contaId){
+  const d=await window._fbGetDoc(`ze/users/${uid}/conta_tx/${contaId}`); return d?.txs||[];
+}
+async function fbSaveContaTx(uid,contaId,txs){
+  await window._fbSetDoc(`ze/users/${uid}/conta_tx/${contaId}`,{txs});
+}
+
 function getProfiles(){return ld('ze_profiles',[]);}
-function saveProfiles(p){sv('ze_profiles',p);}
+function saveProfiles(p){sv('ze_profiles',p);fbSaveProfiles(p).catch(console.error);}
 function uid(){return currentUser.id;}
 function uKey(k){return`ze_${uid()}_${k}`;}
 function mKey(y,m){return uKey(`mo_${y}_${m}`);}
@@ -856,13 +916,8 @@ function pct(s,l){return l>0?Math.min(100,Math.round(s/l*100)):0;}
 function bc(p,hex){return p>=100?'#E24B4A':p>=80?'#EF9F27':hex;}
 function pillStyle(p){if(p>=100)return'background:#FEE2E2;color:#991B1B';if(p>=80)return'background:#FEF3C7;color:#92400E';return'background:#D1FAE5;color:#065F46';}
 
-// Is payment method credit?
-function isCredit(payName){
-  const p=pays.find(x=>x.name===payName); return p&&CREDIT_TYPES.includes(p.type);
-}
-function getFaturaDay(payName){
-  const p=pays.find(x=>x.name===payName); return p?.diaFatura||10;
-}
+function isCredit(payName){const p=pays.find(x=>x.name===payName);return p&&CREDIT_TYPES.includes(p.type);}
+function getFaturaDay(payName){const p=pays.find(x=>x.name===payName);return p?.diaFatura||10;}
 
 /* ── CÓDIGO DE ACESSO ── */
 const ACCESS_CODE='ze2025'; // 🔑 ALTERE ESTE CÓDIGO
@@ -887,7 +942,18 @@ function checkAccessCode(){
 function renderLogin(){
   document.getElementById('login-screen').style.display='flex';
   document.getElementById('app').classList.remove('visible');
-  const profiles=getProfiles();
+  const grid=document.getElementById('profile-grid');
+  grid.innerHTML='<div style="font-size:12px;color:var(--text2);text-align:center;padding:10px 0 4px">⏳ Carregando perfis...</div>';
+  fbGetProfiles().then(profiles=>{
+    // sync to localStorage
+    sv('ze_profiles',profiles);
+    _renderProfileGrid(profiles);
+  }).catch(()=>{
+    // fallback to localStorage
+    _renderProfileGrid(getProfiles());
+  });
+}
+function _renderProfileGrid(profiles){
   const grid=document.getElementById('profile-grid');
   if(!profiles.length){grid.innerHTML='<div style="font-size:12px;color:var(--text2);text-align:center;padding:10px 0 4px">Nenhum perfil. Crie abaixo.</div>';return;}
   grid.innerHTML=profiles.map(p=>`
@@ -904,19 +970,30 @@ function createProfile(){
   const color=document.getElementById('np-color').value;
   const pin=document.getElementById('np-pin').value.trim();
   if(pin&&!/^\d{4}$/.test(pin)){alert('PIN deve ter 4 dígitos.');return;}
-  const id='u'+Date.now(); const profiles=getProfiles();
-  profiles.push({id,name,emoji,color,pin}); saveProfiles(profiles);
-  document.getElementById('np-name').value=''; document.getElementById('np-emoji').value=''; document.getElementById('np-pin').value='';
-  renderLogin();
+  const id='u'+Date.now();
+  fbGetProfiles().then(profiles=>{
+    profiles.push({id,name,emoji,color,pin});
+    saveProfiles(profiles);
+    document.getElementById('np-name').value=''; document.getElementById('np-emoji').value=''; document.getElementById('np-pin').value='';
+    _renderProfileGrid(profiles);
+  }).catch(()=>{
+    const profiles=getProfiles();
+    profiles.push({id,name,emoji,color,pin});
+    saveProfiles(profiles);
+    document.getElementById('np-name').value=''; document.getElementById('np-emoji').value=''; document.getElementById('np-pin').value='';
+    _renderProfileGrid(profiles);
+  });
 }
 function deleteProfile(id){
   if(!confirm('Excluir perfil e todos os dados?'))return;
-  saveProfiles(getProfiles().filter(p=>p.id!==id));
-  Object.keys(localStorage).filter(k=>k.startsWith('ze_'+id+'_')).forEach(k=>localStorage.removeItem(k));
-  renderLogin();
+  fbGetProfiles().then(profiles=>{
+    saveProfiles(profiles.filter(p=>p.id!==id));
+    Object.keys(localStorage).filter(k=>k.startsWith('ze_'+id+'_')).forEach(k=>localStorage.removeItem(k));
+    renderLogin();
+  });
 }
 function selectProfile(id){
-  const p=getProfiles().find(x=>x.id===id); if(!p)return;
+  const profiles=getProfiles(); const p=profiles.find(x=>x.id===id); if(!p)return;
   if(p.pin){showPinModal(p,()=>loginUser(p));}else{loginUser(p);}
 }
 function showPinModal(profile,onOk){
@@ -936,8 +1013,9 @@ function showPinModal(profile,onOk){
 }
 function tryPin(id){
   const inp=document.getElementById('pin-inp'); if(inp.value.length<4)return;
-  const p=getProfiles().find(x=>x.id===id);
-  if(inp.value===p.pin){closeModal();window._pinOk&&window._pinOk();}
+  // use localStorage cache (already synced from Firebase on renderLogin)
+  const profiles=getProfiles(); const p=profiles.find(x=>x.id===id);
+  if(p&&inp.value===p.pin){closeModal();window._pinOk&&window._pinOk();}
   else{document.getElementById('pin-err').style.display='block';inp.value='';inp.focus();}
 }
 function loginUser(profile){
@@ -948,9 +1026,39 @@ function loginUser(profile){
   document.getElementById('user-nm').textContent=profile.name;
   document.getElementById('cfg-psub').textContent='Perfil ativo: '+profile.name;
   yr=now.getFullYear(); mo=now.getMonth();
-  state=loadState(); pays=ld(uKey('pays'),DEF_PAYS); selectedPay=null; selectedConta=null;
   document.getElementById('month-label').textContent=MONTHS[mo]+' '+yr;
+  // Show loading indicator while syncing from Firebase
+  document.getElementById('page-limites').innerHTML='<div class="empty">⏳ Sincronizando dados...</div>';
   goTo('limites');
+  // Load from Firebase then hydrate localStorage
+  fbLoadBase(profile.id).then(async base=>{
+    if(base&&Object.keys(base).length){
+      if(base.cats)sv(uKey('cats'),base.cats);
+      if(base.pays)sv(uKey('pays'),base.pays);
+      if(base.receitas)sv(uKey('receitas'),base.receitas);
+      if(base.despesasFixas)sv(uKey('despesas_fixas'),base.despesasFixas);
+      if(base.fcFlags)sv(uKey('fc_flags'),base.fcFlags);
+      if(base.contas)sv(uKey('contas'),base.contas);
+    }
+    // Load current month from Firebase
+    const md=await fbGetMonth(profile.id,yr,mo);
+    if(md&&md.expenses){sv(mKey(yr,mo),md);}
+    // Load conta transactions
+    const contas=base?.contas||ld(uKey('contas'),[]);
+    for(const c of contas){
+      const txs=await fbGetContaTx(profile.id,c.id);
+      if(txs&&txs.length)sv(getContaTxKey(c.id),txs);
+    }
+    state=loadState(); pays=ld(uKey('pays'),DEF_PAYS); selectedPay=null; selectedConta=null;
+    // Restore the page properly
+    document.getElementById('page-limites').innerHTML='';
+    goTo('limites');
+  }).catch(err=>{
+    console.error('Firebase sync error:',err);
+    state=loadState(); pays=ld(uKey('pays'),DEF_PAYS); selectedPay=null; selectedConta=null;
+    document.getElementById('page-limites').innerHTML='';
+    goTo('limites');
+  });
 }
 function switchProfile(){
   currentUser=null;state=null;
@@ -974,11 +1082,13 @@ function saveEditProfile(){
   const emoji=document.getElementById('ep-e').value.trim(); const color=document.getElementById('ep-c').value;
   const pin=document.getElementById('ep-p').value.trim();
   if(pin&&!/^\d{4}$/.test(pin)){alert('PIN deve ter 4 dígitos.');return;}
-  const profiles=getProfiles(); const idx=profiles.findIndex(p=>p.id===uid()); if(idx===-1)return;
-  profiles[idx]={...profiles[idx],name,emoji,color,pin}; saveProfiles(profiles); currentUser=profiles[idx];
-  const av=document.getElementById('user-av'); av.textContent=emoji||ini(name); av.style.background=color;
-  document.getElementById('user-nm').textContent=name; document.getElementById('cfg-psub').textContent='Perfil ativo: '+name;
-  closeModal();
+  fbGetProfiles().then(profiles=>{
+    const idx=profiles.findIndex(p=>p.id===uid()); if(idx===-1)return;
+    profiles[idx]={...profiles[idx],name,emoji,color,pin}; saveProfiles(profiles); currentUser=profiles[idx];
+    const av=document.getElementById('user-av'); av.textContent=emoji||ini(name); av.style.background=color;
+    document.getElementById('user-nm').textContent=name; document.getElementById('cfg-psub').textContent='Perfil ativo: '+name;
+    closeModal();
+  });
 }
 
 /* ── DATA ── */
@@ -1004,11 +1114,11 @@ function loadState(){
   cats.forEach(c=>c.subcategories.forEach(s=>{s.spent=md.spentMap[c.id+'_'+s.id]||0;}));
   const receitas=ld(uKey('receitas'),[]);
   const despesasFixas=ld(uKey('despesas_fixas'),[]);
-  // fc flags: keyed by itemId_yr_mo
   const fcFlags=ld(uKey('fc_flags'),{});
   return{cats,expenses:md.expenses,receitas,despesasFixas,fcFlags};
 }
 function saveState(st){
+  // Save to localStorage (fast, local)
   sv(uKey('cats'),st.cats.map(c=>({...c,subcategories:c.subcategories.map(s=>({id:s.id,name:s.name,limit:s.limit}))})));
   const sm={};
   st.cats.forEach(c=>c.subcategories.forEach(s=>{sm[c.id+'_'+s.id]=s.spent;}));
@@ -1016,10 +1126,22 @@ function saveState(st){
   sv(uKey('receitas'),st.receitas);
   sv(uKey('despesas_fixas'),st.despesasFixas);
   sv(uKey('fc_flags'),st.fcFlags);
+  // Sync to Firebase (async, cloud)
+  const uid_=uid();
+  const cats_=st.cats.map(c=>({...c,subcategories:c.subcategories.map(s=>({id:s.id,name:s.name,limit:s.limit}))}));
+  fbSaveBase(uid_,{cats:cats_,pays,receitas:st.receitas,despesasFixas:st.despesasFixas,fcFlags:st.fcFlags}).catch(console.error);
+  fbSaveMonth(uid_,yr,mo,{spentMap:sm,expenses:st.expenses}).catch(console.error);
 }
-function saveFcFlags(){sv(uKey('fc_flags'),state.fcFlags);}
+function saveFcFlags(){
+  sv(uKey('fc_flags'),state.fcFlags);
+  fbSaveBase(uid(),{cats:state.cats.map(c=>({...c,subcategories:c.subcategories.map(s=>({id:s.id,name:s.name,limit:s.limit}))})),pays,receitas:state.receitas,despesasFixas:state.despesasFixas,fcFlags:state.fcFlags}).catch(console.error);
+}
 
-// Get expenses from a specific month (for fatura calculation)
+function getContas(){return ld(uKey('contas'),[]);}
+function saveContas(c){sv(uKey('contas'),c);fbSaveBase(uid(),{cats:state.cats.map(c2=>({...c2,subcategories:c2.subcategories.map(s=>({id:s.id,name:s.name,limit:s.limit}))})),pays,receitas:state.receitas,despesasFixas:state.despesasFixas,fcFlags:state.fcFlags,contas:c}).catch(console.error);}
+function getContaTxKey(contaId){return uKey('conta_tx_'+contaId);}
+function getContaTx(contaId){return ld(getContaTxKey(contaId),[]);}
+function saveContaTx(contaId,txs){sv(getContaTxKey(contaId),txs);fbSaveContaTx(uid(),contaId,txs).catch(console.error);}
 function getExpensesOfMonth(y,m){
   const md=ld(mKey(y,m),{spentMap:{},expenses:[]}); return md.expenses||[];
 }
@@ -1070,10 +1192,14 @@ function getDespesasFixasMes(){
 
 function changeMonth(d){
   mo+=d; if(mo>11){mo=0;yr++;} if(mo<0){mo=11;yr--;}
-  state=loadState(); selectedPay=null;
   document.getElementById('month-label').textContent=MONTHS[mo]+' '+yr;
   const active=document.querySelector('.page.active')?.id?.replace('page-','');
-  if(active)goTo(active);
+  // Sync this month from Firebase then reload
+  fbGetMonth(uid(),yr,mo).then(md=>{
+    if(md&&md.expenses)sv(mKey(yr,mo),md);
+    state=loadState(); selectedPay=null;
+    if(active)goTo(active);
+  }).catch(()=>{state=loadState();selectedPay=null;if(active)goTo(active);});
 }
 function goTo(pg){
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
