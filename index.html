@@ -2517,30 +2517,61 @@ function renderPag(){
   let nm=mo+1, ny=yr; if(nm>11){nm=0;ny=yr+1;}
 
   // Build card list: one entry per pay method
+  // Despesas fixas do mês atual e anterior para incluir na fatura
+  const fixasAtual=getDespesasFixasMes(); // mês atual
+
+  // Despesas fixas do mês anterior (para fatura a pagar)
+  const fixasPrev=(()=>{
+    const despesasFixas=ld(uKey('despesas_fixas'),[]);
+    return despesasFixas.filter(d=>{
+      const start=new Date(d.startDate+'T12:00:00');
+      const sy=start.getFullYear(),sm=start.getMonth();
+      if(sy>py||(sy===py&&sm>pm))return false;
+      if(d.totalParcelas){const elapsed=(py-sy)*12+(pm-sm);return elapsed<d.totalParcelas;}
+      return true;
+    }).map(d=>{
+      if(d.totalParcelas){
+        const start=new Date(d.startDate+'T12:00:00');
+        const elapsed=(py-start.getFullYear())*12+(pm-start.getMonth());
+        return{...d,parcelaAtual:elapsed+1};
+      }
+      return d;
+    });
+  })();
+
   const entries=pays.map(pay=>{
     const isC=isCredit(pay.name);
 
-    // Gastos do mês atual com este método
+    // Gastos de limite do mês atual com este método
     const gastosAtual=state.expenses.filter(e=>e.payment===pay.name);
-    const totalAtual=gastosAtual.reduce((a,e)=>a+e.amount,0);
+    // Despesas fixas do mês atual com este método (à vista ou crédito)
+    const fixasAtualPay=fixasAtual.filter(d=>d.pagamento===pay.name);
+    const totalFixasAtual=fixasAtualPay.reduce((a,d)=>a+d.valorParcela,0);
+    const totalAtual=gastosAtual.reduce((a,e)=>a+e.amount,0)+(isC?0:totalFixasAtual);
+    // Para crédito: fatura em aberto inclui fixas do mês atual
+    const totalAtualCredito=gastosAtual.reduce((a,e)=>a+e.amount,0)+(isC?totalFixasAtual:0);
 
-    // Se crédito: fatura a pagar = gastos do mês anterior
-    let faturaAPagar=0, gastosFaturaAtual=[];
+    // Se crédito: fatura a pagar = gastos do mês anterior + fixas do mês anterior
+    let faturaAPagar=0, gastosFaturaAtual=[], fixasFaturaAtual=[];
     if(isC){
       const prevMd=ld(mKey(py,pm),{spentMap:{},expenses:[]});
       gastosFaturaAtual=(prevMd.expenses||[]).filter(e=>e.payment===pay.name);
-      faturaAPagar=gastosFaturaAtual.reduce((a,e)=>a+e.amount,0);
+      fixasFaturaAtual=fixasPrev.filter(d=>d.pagamento===pay.name);
+      const totalGastosFatura=gastosFaturaAtual.reduce((a,e)=>a+e.amount,0);
+      const totalFixasFatura=fixasFaturaAtual.reduce((a,d)=>a+d.valorParcela,0);
+      faturaAPagar=Math.round((totalGastosFatura+totalFixasFatura)*100)/100;
     }
 
-    return{pay,isC,gastosAtual,totalAtual,faturaAPagar,gastosFaturaAtual};
-  }).filter(e=>e.totalAtual>0||e.faturaAPagar>0||e.gastosAtual.length>0);
+    const totalFinal=isC?totalAtualCredito:totalAtual;
+    return{pay,isC,gastosAtual,totalAtual:totalFinal,faturaAPagar,gastosFaturaAtual,fixasFaturaAtual,fixasAtualPay};
+  }).filter(e=>e.totalAtual>0||e.faturaAPagar>0||e.gastosAtual.length>0||e.fixasAtualPay?.length>0);
 
   // Add methods with no activity too
   const allPays=pays.map(pay=>{
     const found=entries.find(e=>e.pay.name===pay.name);
     if(found)return found;
     const isC=isCredit(pay.name);
-    return{pay,isC,gastosAtual:[],totalAtual:0,faturaAPagar:0,gastosFaturaAtual:[]};
+    return{pay,isC,gastosAtual:[],totalAtual:0,faturaAPagar:0,gastosFaturaAtual:[],fixasFaturaAtual:[],fixasAtualPay:[]};
   });
 
   const cards=document.getElementById('pag-cards');
@@ -2591,7 +2622,7 @@ function renderPag(){
   const selEntry=allPays.find(e=>e.pay.name===selectedPay)||allPays[0];
   if(!selEntry)return;
 
-  const {pay,isC,gastosAtual,totalAtual,faturaAPagar,gastosFaturaAtual}=selEntry;
+  const {pay,isC,gastosAtual,totalAtual,faturaAPagar,gastosFaturaAtual,fixasFaturaAtual=[],fixasAtualPay=[]}=selEntry;
 
   // ── Detail panel ──
   const prevMd=ld(mKey(py,pm),{spentMap:{},expenses:[]});
@@ -2653,12 +2684,22 @@ function renderPag(){
         </div>
         <div style="font-size:22px;font-weight:800;color:${faturaAPagar>0?'var(--red)':'var(--text3)'};font-family:var(--font-mono)">${faturaAPagar>0?fmt(faturaAPagar):'R$ 0,00'}</div>
       </div>
-      ${gastosFaturaAtual.length?`
-        <div style="font-size:9px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px">Por categoria</div>
-        ${catBreakdown(gastosFaturaAtual)}
-        <div style="margin-top:10px;font-size:9px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px">Lançamentos (${gastosFaturaAtual.length})</div>
-        ${expRows(gastosFaturaAtual,'Nenhum gasto.')}
-      `:`<div style="font-size:12px;color:var(--text3);padding:8px 0">Sem gastos em ${MONTHS[pm]}.</div>`}
+      ${(gastosFaturaAtual.length||fixasFaturaAtual.length)?`
+        ${gastosFaturaAtual.length?`
+          <div style="font-size:9px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px">Por categoria (gastos)</div>
+          ${catBreakdown(gastosFaturaAtual)}
+          <div style="margin-top:10px;font-size:9px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px">Lançamentos (${gastosFaturaAtual.length})</div>
+          ${expRows(gastosFaturaAtual,'Nenhum gasto.')}
+        `:''}
+        ${fixasFaturaAtual.length?`
+          <div style="margin-top:10px;font-size:9px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px">Despesas fixas incluídas</div>
+          ${fixasFaturaAtual.map(d=>`<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border3)">
+            <span style="font-size:12px">${(FIX_CATS[d.categoria]||'📦').split(' ')[0]}</span>
+            <div style="flex:1;font-size:11px;color:var(--text)">${d.descricao}${d.totalParcelas?' ('+d.parcelaAtual+'/'+d.totalParcelas+')':''}</div>
+            <div style="font-size:12px;font-weight:700;color:var(--red);font-family:var(--font-mono)">${fmt(d.valorParcela)}</div>
+          </div>`).join('')}
+        `:''}
+      `:`<div style="font-size:12px;color:var(--text3);padding:8px 0">Sem lançamentos em ${MONTHS[pm]}.</div>`}
     </div>`;
 
     // ── Bloco 2: Fatura EM ABERTO (mês atual) ──
@@ -2671,12 +2712,22 @@ function renderPag(){
         </div>
         <div style="font-size:22px;font-weight:800;color:${totalAtual>0?'var(--amber)':'var(--text3)'};font-family:var(--font-mono)">${totalAtual>0?fmt(totalAtual):'R$ 0,00'}</div>
       </div>
-      ${gastosAtual.length?`
-        <div style="font-size:9px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px">Por categoria</div>
-        ${catBreakdown(gastosAtual)}
-        <div style="margin-top:10px;font-size:9px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px">Lançamentos (${gastosAtual.length})</div>
-        ${expRows(gastosAtual,'Nenhum gasto ainda.')}
-      `:`<div style="font-size:12px;color:var(--text3);padding:8px 0">Nenhum gasto em ${MONTHS[mo]} ainda.</div>`}
+      ${(gastosAtual.length||fixasAtualPay.length)?`
+        ${gastosAtual.length?`
+          <div style="font-size:9px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px">Por categoria (gastos)</div>
+          ${catBreakdown(gastosAtual)}
+          <div style="margin-top:10px;font-size:9px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px">Lançamentos (${gastosAtual.length})</div>
+          ${expRows(gastosAtual,'Nenhum gasto ainda.')}
+        `:''}
+        ${fixasAtualPay.length?`
+          <div style="margin-top:10px;font-size:9px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px">Despesas fixas incluídas</div>
+          ${fixasAtualPay.map(d=>`<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border3)">
+            <span style="font-size:12px">${(FIX_CATS[d.categoria]||'📦').split(' ')[0]}</span>
+            <div style="flex:1;font-size:11px;color:var(--text)">${d.descricao}${d.totalParcelas?' ('+d.parcelaAtual+'/'+d.totalParcelas+')':''}</div>
+            <div style="font-size:12px;font-weight:700;color:var(--amber);font-family:var(--font-mono)">${fmt(d.valorParcela)}</div>
+          </div>`).join('')}
+        `:''}
+      `:`<div style="font-size:12px;color:var(--text3);padding:8px 0">Nenhum lançamento em ${MONTHS[mo]} ainda.</div>`}
     </div>`;
 
   } else {
@@ -3064,27 +3115,74 @@ function saveFinanciamentos(fins) {
   fbSaveBase(uid(), base).catch(console.error);
 }
 
+// Sistemas de amortização:
+// price   = Tabela Price (parcelas fixas, juros decrescentes) — financiamento veículo/imóvel
+// sac     = SAC (amortização constante, parcelas decrescentes) — comum em imóveis CEF
+// simples = Empréstimo simples (juros fixos sobre saldo, parcela fixa) — crédito pessoal/consignado
+
 function calcSaldoDevedor(fin, dataBase) {
-  const { valorFinanciado, taxaMensal, totalParcelas, dataInicio } = fin;
+  const { valorFinanciado, taxaMensal, totalParcelas, dataInicio, sistema } = fin;
   if (!valorFinanciado || !taxaMensal || !totalParcelas || !dataInicio) {
-    return { saldoHoje: 0, parcelaPaga: 0, parcelaRestante: 0, valorParcela: 0, totalJuros: 0, totalPago: 0 };
+    return { saldoHoje: 0, parcelaPaga: 0, parcelaRestante: 0, valorParcela: 0, valorParcelaAtual: 0, totalJuros: 0, totalPago: 0 };
   }
   const taxa = taxaMensal / 100;
-  const pmt = valorFinanciado * taxa / (1 - Math.pow(1 + taxa, -totalParcelas));
   const inicio = new Date(dataInicio + 'T12:00:00');
   const base = dataBase || new Date();
   const mesesPagos = Math.max(0, (base.getFullYear() - inicio.getFullYear()) * 12 + (base.getMonth() - inicio.getMonth()));
   const parcelaPaga = Math.min(mesesPagos, totalParcelas);
   const parcelaRestante = totalParcelas - parcelaPaga;
+  const sis = sistema || 'price';
+
+  if (sis === 'price') {
+    // Parcela fixa: PMT = PV * i / (1-(1+i)^-n)
+    const pmt = valorFinanciado * taxa / (1 - Math.pow(1 + taxa, -totalParcelas));
+    const saldoDevedor = parcelaRestante > 0 ? pmt * (1 - Math.pow(1 + taxa, -parcelaRestante)) / taxa : 0;
+    const totalJuros = totalParcelas * pmt - valorFinanciado;
+    return {
+      saldoHoje: Math.round(saldoDevedor * 100) / 100, parcelaPaga, parcelaRestante,
+      valorParcela: Math.round(pmt * 100) / 100, valorParcelaAtual: Math.round(pmt * 100) / 100,
+      totalJuros: Math.round(totalJuros * 100) / 100, totalPago: Math.round(parcelaPaga * pmt * 100) / 100
+    };
+  }
+
+  if (sis === 'sac') {
+    // Amortização constante = PV/n; Juros = saldo * i; Parcela decresce
+    const amort = valorFinanciado / totalParcelas;
+    const saldoDevedor = Math.max(0, amort * parcelaRestante);
+    // Parcela atual = amort + juros do saldo atual
+    const jurosAtual = saldoDevedor * taxa;
+    const parcelaAtual = amort + jurosAtual;
+    // Parcela da 1ª = amort + juros do total
+    const primeiraParcela = amort + valorFinanciado * taxa;
+    // Total pago até agora
+    let totalPago = 0, totalJuros = 0;
+    for (let k = 0; k < parcelaPaga; k++) {
+      const saldoK = valorFinanciado - amort * k;
+      const parcelaK = amort + saldoK * taxa;
+      totalPago += parcelaK;
+      totalJuros += saldoK * taxa;
+    }
+    // Juros restantes
+    for (let k = parcelaPaga; k < totalParcelas; k++) {
+      const saldoK = valorFinanciado - amort * k;
+      totalJuros += saldoK * taxa;
+    }
+    return {
+      saldoHoje: Math.round(saldoDevedor * 100) / 100, parcelaPaga, parcelaRestante,
+      valorParcela: Math.round(primeiraParcela * 100) / 100, valorParcelaAtual: Math.round(parcelaAtual * 100) / 100,
+      totalJuros: Math.round(totalJuros * 100) / 100, totalPago: Math.round(totalPago * 100) / 100
+    };
+  }
+
+  // simples: empréstimo pessoal — parcelas fixas, juros calculados no início
+  // Funciona igual Price na prática, mas rotulado diferente
+  const pmt = valorFinanciado * taxa / (1 - Math.pow(1 + taxa, -totalParcelas));
   const saldoDevedor = parcelaRestante > 0 ? pmt * (1 - Math.pow(1 + taxa, -parcelaRestante)) / taxa : 0;
-  const totalPago = parcelaPaga * pmt;
   const totalJuros = totalParcelas * pmt - valorFinanciado;
   return {
-    saldoHoje: Math.round(saldoDevedor * 100) / 100,
-    parcelaPaga, parcelaRestante,
-    valorParcela: Math.round(pmt * 100) / 100,
-    totalJuros: Math.round(totalJuros * 100) / 100,
-    totalPago: Math.round(totalPago * 100) / 100
+    saldoHoje: Math.round(saldoDevedor * 100) / 100, parcelaPaga, parcelaRestante,
+    valorParcela: Math.round(pmt * 100) / 100, valorParcelaAtual: Math.round(pmt * 100) / 100,
+    totalJuros: Math.round(totalJuros * 100) / 100, totalPago: Math.round(parcelaPaga * pmt * 100) / 100
   };
 }
 
@@ -3151,7 +3249,8 @@ function _renderFinDetail() {
       <span style="font-size:26px">🏦</span>
       <div style="flex:1">
         <div style="font-size:15px;font-weight:800;color:var(--text)">${f.nome}</div>
-        <div style="font-size:11px;color:var(--text3)">${f.banco || ''} · ${f.taxaMensal}% a.m. · ${f.totalParcelas}x de ${fmt(valorParcela)}</div>
+        <div style="font-size:11px;color:var(--text3)">${f.banco || ''} · ${f.taxaMensal}% a.m. · ${{price:'Tabela Price',sac:'SAC',simples:'Emp. Simples'}[f.sistema||'price']}</div>
+      <div style="font-size:11px;color:var(--text3)">${f.totalParcelas}x · parcela ${f.sistema==='sac'?'atual: '+fmt(valorParcelaAtual)+' (decresce)':fmt(valorParcela)}</div>
       </div>
       <button onclick="openFinModal('${f.id}')" style="padding:5px 12px;border:1px solid var(--border2);background:transparent;border-radius:var(--r);font-size:11px;color:var(--text2);cursor:pointer;font-family:var(--font)">✏️ Editar</button>
     </div>
@@ -3208,6 +3307,14 @@ function openFinModal(editId) {
     <h3>${f ? 'Editar financiamento' : 'Novo financiamento'}</h3>
     <div class="mf"><label>Nome / Descrição</label><input id="fin-nome" value="${f?.nome || ''}" placeholder="Ex: Financiamento Carro, Imóvel..."></div>
     <div class="mf"><label>Banco / Credor</label><input id="fin-banco" value="${f?.banco || ''}" placeholder="Ex: Bradesco, CEF..."></div>
+    <div class="mf"><label>Sistema de amortização</label>
+      <select id="fin-sistema">
+        <option value="price" ${(!f?.sistema||f?.sistema==='price')?'selected':''}>📊 Tabela Price — parcela fixa (veículos, crédito pessoal)</option>
+        <option value="sac" ${f?.sistema==='sac'?'selected':''}>📉 SAC — amortização constante, parcela decresce (imóveis CEF/SBPE)</option>
+        <option value="simples" ${f?.sistema==='simples'?'selected':''}>💳 Empréstimo simples — parcela fixa (consignado, pessoal)</option>
+      </select>
+      <div style="font-size:9px;color:var(--text3);margin-top:4px" id="fin-sistema-hint"></div>
+    </div>
     <div class="mf"><label>Valor financiado (R$)</label><input id="fin-valor" type="number" min="0" step="100" value="${f?.valorFinanciado || ''}" placeholder="Ex: 50000"></div>
     <div class="mf"><label>Taxa de juros mensal (%)</label><input id="fin-taxa" type="number" min="0" step="0.01" value="${f?.taxaMensal || ''}" placeholder="Ex: 1.5"></div>
     <div class="mf"><label>Total de parcelas</label><input id="fin-parcelas" type="number" min="1" value="${f?.totalParcelas || ''}" placeholder="Ex: 48"></div>
@@ -3225,6 +3332,12 @@ function openFinModal(editId) {
       <button class="ms" onclick="saveFin(${f ? `'${f.id}'` : 'null'})">Salvar</button>
     </div>
   </div></div>`;
+  // Show hint
+  const hints={price:'Parcelas iguais do início ao fim. Mais juros no começo.',sac:'Amortização igual todo mês, juros sobre saldo devedor. Parcela cai com o tempo.',simples:'Parcelas fixas, sem correção monetária adicional.'};
+  const sel=document.getElementById('fin-sistema');
+  const hint=document.getElementById('fin-sistema-hint');
+  const upd=()=>{hint.textContent=hints[sel.value]||'';};
+  sel.addEventListener('change',upd); upd();
 }
 
 function saveFin(editId) {
@@ -3238,15 +3351,16 @@ function saveFin(editId) {
   const pagamento = document.getElementById('fin-pay').value;
   const categoria = document.getElementById('fin-cat').value;
   if (!valorFinanciado || !taxaMensal || !totalParcelas) { alert('Preencha valor, taxa e parcelas.'); return; }
-  const { valorParcela } = calcSaldoDevedor({ valorFinanciado, taxaMensal, totalParcelas, dataInicio });
+  const sistema = document.getElementById('fin-sistema').value;
+  const { valorParcela } = calcSaldoDevedor({ valorFinanciado, taxaMensal, totalParcelas, dataInicio, sistema });
   const fins = getFinanciamentos();
   if (editId) {
     const idx = fins.findIndex(f => f.id === editId);
     if (idx === -1) return;
-    fins[idx] = { ...fins[idx], nome, banco, valorFinanciado, taxaMensal, totalParcelas, dataInicio, pagamento, categoria, valorParcela };
+    fins[idx] = { ...fins[idx], nome, banco, valorFinanciado, taxaMensal, totalParcelas, dataInicio, pagamento, categoria, valorParcela, sistema };
   } else {
     const id = 'fin' + Date.now();
-    fins.push({ id, nome, banco, valorFinanciado, taxaMensal, totalParcelas, dataInicio, pagamento, categoria, valorParcela });
+    fins.push({ id, nome, banco, valorFinanciado, taxaMensal, totalParcelas, dataInicio, pagamento, categoria, valorParcela, sistema });
     _selectedFin = id;
   }
   _syncFinToDespesasFixas(fins);
