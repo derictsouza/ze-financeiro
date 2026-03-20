@@ -804,6 +804,7 @@ body{
     <button class="nt" id="nav-fc" onclick="goTo('fc')">💸 Fluxo de Caixa</button>
     <button class="nt" id="nav-banco" onclick="goTo('banco')">🏦 Contas</button>
     <button class="nt" id="nav-pag" onclick="goTo('pag')">💳 Faturas</button>
+    <button class="nt" id="nav-fin" onclick="goTo('fin')">🏦 Financiamentos</button>
     <button class="nt" id="nav-reg" onclick="goTo('reg')">➕ Registrar</button>
     <button class="nt" id="nav-cfg" onclick="goTo('cfg')">⚙️ Config</button>
   </div>
@@ -873,6 +874,16 @@ body{
       </div>
     </div>
     <div class="pl-note" id="pl-note"></div>
+    <div id="pl-meta-bar" style="display:none;align-items:center;gap:10px;padding:10px 14px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);flex-wrap:wrap">
+      <span style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;white-space:nowrap">🎯 Meta patrimônio</span>
+      <div style="display:flex;align-items:center;gap:6px">
+        <span style="font-size:11px;color:var(--text2)">R$</span>
+        <input id="pl-meta-input" type="number" min="0" step="1000" placeholder="Ex: 100000"
+          style="width:130px;padding:6px 10px;border:1px solid var(--border2);border-radius:var(--r);font-size:12px;background:var(--bg);color:var(--text);outline:none;font-family:var(--font-mono)"
+          oninput="updatePlMeta()" value="">
+      </div>
+      <div id="pl-meta-result" style="flex:1;min-width:200px"></div>
+    </div>
     <div class="pl-table" id="pl-table"></div>
     <div class="pl-anual-wrap" id="pl-anual-wrap" style="display:none">
       <table class="pl-anual" id="pl-anual-table"></table>
@@ -899,7 +910,7 @@ body{
   <div class="page pag-page" id="page-pag">
     <div class="pag-inner">
       <div class="pag-left">
-        <div class="phdr"><span class="slbl2">Formas de pagamento</span></div>
+        <div class="phdr"><span class="slbl2">Formas de pagamento</span><button class="rbtn" onclick="syncAndRenderPag()" style="font-size:9px">↻ Atualizar</button></div>
         <div id="pag-cards"></div>
       </div>
       <div class="pag-right" id="pag-detail"><div class="empty">Selecione um método.</div></div>
@@ -1002,11 +1013,23 @@ body{
     </div>
   </div>
 
+  <!-- FINANCIAMENTOS -->
+  <div class="page" id="page-fin" style="flex-direction:row;overflow:hidden">
+    <div style="width:320px;flex-shrink:0;border-right:1px solid var(--border);overflow-y:auto;display:flex;flex-direction:column">
+      <div class="phdr">
+        <span class="slbl2">Meus financiamentos</span>
+        <button class="abtn" onclick="openFinModal()">+ Novo</button>
+      </div>
+      <div id="fin-list" style="flex:1;overflow-y:auto"></div>
+    </div>
+    <div style="flex:1;overflow-y:auto" id="fin-detail"><div class="empty">Selecione um financiamento.</div></div>
+  </div>
+
   <!-- CONFIG -->
   <div class="page cfg-page" id="page-cfg">
     <div class="cfg-sec">
       <div class="cfg-sh"><div><div class="cfg-st">Formas de pagamento</div><div class="cfg-ss">Cartões de crédito têm data de fatura · Débito/Pix/Dinheiro são à vista</div></div></div>
-      <div id="pay-list"></div>
+      <div id="pay-list" style="max-height:280px;overflow-y:auto"></div>
       <div class="cfg-af">
         <div class="ff" style="min-width:130px;flex:2"><label>Nome</label><input id="np2-name" placeholder="Ex: Itaú crédito"></div>
         <div class="ff" style="min-width:80px;flex:1"><label>Tipo</label><select id="np2-type" onchange="toggleFaturaField()">
@@ -1249,10 +1272,15 @@ function loginUser(profile){
       if(base.despesasFixas)sv(uKey('despesas_fixas'),base.despesasFixas);
       if(base.fcFlags)sv(uKey('fc_flags'),base.fcFlags);
       if(base.contas)sv(uKey('contas'),base.contas);
+      if(base.financiamentos)sv(uKey('financiamentos'),base.financiamentos);
     }
     // Load current month data from Firebase
+    // Sync current AND previous month (needed for fatura calculation)
     const md=await fbGetMonth(profile.id,yr,mo);
     if(md&&md.expenses)sv(mKey(yr,mo),md);
+    let pm2=mo-1,py2=yr; if(pm2<0){pm2=11;py2=yr-1;}
+    const mdPrev=await fbGetMonth(profile.id,py2,pm2);
+    if(mdPrev&&mdPrev.expenses)sv(mKey(py2,pm2),mdPrev);
     // Load conta transactions
     const contas=base?.contas||ld(uKey('contas'),[]);
     for(const c of contas){
@@ -1407,8 +1435,12 @@ function changeMonth(d){
   document.getElementById('month-label').textContent=MONTHS[mo]+' '+yr;
   const active=document.querySelector('.page.active')?.id?.replace('page-','');
   // Sync this month from Firebase then reload
-  fbGetMonth(uid(),yr,mo).then(md=>{
+  fbGetMonth(uid(),yr,mo).then(async md=>{
     if(md&&md.expenses)sv(mKey(yr,mo),md);
+    // Also sync prev month for fatura
+    let pm2=mo-1,py2=yr; if(pm2<0){pm2=11;py2=yr-1;}
+    const mdPrev=await fbGetMonth(uid(),py2,pm2).catch(()=>null);
+    if(mdPrev&&mdPrev.expenses)sv(mKey(py2,pm2),mdPrev);
     state=loadState(); selectedPay=null;
     if(active)goTo(active);
   }).catch(()=>{state=loadState();selectedPay=null;if(active)goTo(active);});
@@ -1427,6 +1459,7 @@ function goTo(pg){
   if(pg==='pag')renderPag();
   if(pg==='reg')renderReg();
   if(pg==='cfg')renderCfg();
+  if(pg==='fin')renderFin();
 }
 
 /* ── CONTAS BANCÁRIAS ── */
@@ -1943,6 +1976,7 @@ function switchPLTab(tab){
   document.getElementById('pl-anual-year-nav').style.display=tab==='anual'?'flex':'none';
   if(tab==='anual'){_plYear=yr; renderPLAnual();}
   else renderPLMes();
+  _updateMetaBarVisibility();
 }
 function changePLYear(d){_plYear+=d; renderPLAnual();}
 
@@ -1956,6 +1990,7 @@ function renderPL(){
   document.getElementById('pl-tab-anual').classList.toggle('active',_plTab==='anual');
   if(_plTab==='anual'){_plYear=yr; renderPLAnual();}
   else renderPLMes();
+  _updateMetaBarVisibility();
 }
 
 // ── Helpers para P&L ────────────────────────────────────────────
@@ -2460,6 +2495,20 @@ function renderFC(){
 }
 
 /* ── PAGAMENTOS ── */
+async function syncAndRenderPag(){
+  if(!currentUser)return;
+  let pm2=mo-1,py2=yr; if(pm2<0){pm2=11;py2=yr-1;}
+  try{
+    const [mdCur,mdPrev]=await Promise.all([
+      fbGetMonth(uid(),yr,mo),
+      fbGetMonth(uid(),py2,pm2)
+    ]);
+    if(mdCur&&mdCur.expenses)sv(mKey(yr,mo),mdCur);
+    if(mdPrev&&mdPrev.expenses)sv(mKey(py2,pm2),mdPrev);
+    state=loadState();
+  }catch(e){console.warn('sync failed',e);}
+  renderPag();
+}
 function renderPag(){
   // ── Helpers ──
   // Fatura a PAGAR neste mês = gastos de crédito do mês ANTERIOR
@@ -2647,6 +2696,30 @@ function renderPag(){
         <div style="margin-top:10px;font-size:9px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px">Lançamentos (${gastosAtual.length})</div>
         ${expRows(gastosAtual,'Nenhum gasto neste mês.')}
       `:`<div style="font-size:12px;color:var(--text3);padding:8px 0">Nenhum gasto em ${MONTHS[mo]}.</div>`}
+    </div>`;
+  }
+
+  // ── Despesas fixas associadas a este método (todos os meses) ──
+  const fixasDoMes=getDespesasFixasMes().filter(d=>d.pagamento===pay.name);
+  if(fixasDoMes.length){
+    const totalFix=fixasDoMes.reduce((a,d)=>a+d.valorParcela,0);
+    detail+=`
+    <div style="padding:12px 16px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+        <div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.08em">🔴 Despesas fixas neste método</div>
+        <div style="font-size:14px;font-weight:800;color:var(--purple);font-family:var(--font-mono)">${fmt(totalFix)}/mês</div>
+      </div>
+      ${fixasDoMes.map(d=>{
+        const parc=d.totalParcelas?` · ${d.parcelaAtual||'?'}/${d.totalParcelas}`:'';
+        return`<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--border3)">
+          <span style="font-size:12px">${(FIX_CATS[d.categoria]||'📦').split(' ')[0]}</span>
+          <div style="flex:1;min-width:0">
+            <div style="font-size:11px;font-weight:600;color:var(--text)">${d.descricao}${parc}</div>
+            <div style="font-size:10px;color:var(--text3)">Vence dia ${d.diaVencimento} · todo mês</div>
+          </div>
+          <div style="font-size:12px;font-weight:700;color:var(--purple);font-family:var(--font-mono)">${fmt(d.valorParcela)}</div>
+        </div>`;
+      }).join('')}
     </div>`;
   }
 
@@ -2913,6 +2986,302 @@ function delExp(i){
   if(s)s.spent=Math.max(0,Math.round((s.spent-exp.amount)*100)/100);
   state.expenses.splice(i,1);saveState(state);closeModal();renderGastos();
 }
+
+
+/* ══════════════════════════════════════════════════════
+   META DE PATRIMÔNIO NO P&L
+   ══════════════════════════════════════════════════════ */
+let _plMeta = parseFloat(localStorage.getItem('ze_pl_meta')) || 0;
+
+function updatePlMeta() {
+  const val = parseFloat(document.getElementById('pl-meta-input')?.value) || 0;
+  _plMeta = val;
+  localStorage.setItem('ze_pl_meta', val);
+  _renderPlMetaResult();
+}
+
+function _renderPlMetaResult() {
+  const el = document.getElementById('pl-meta-result');
+  if (!el) return;
+  if (!_plMeta) { el.innerHTML = ''; return; }
+  const y = _plYear || yr;
+  const contas = getContas();
+  const totalInvestido = contas.reduce((a, c) => a + (c.valorInvestido || 0), 0);
+  const cats = ld(uKey('cats'), DEF_CATS);
+  let acum = 0;
+  for (let m = 0; m < 12; m++) {
+    const st = _mesSt(y, m);
+    const rec = _getReceitasMes(y, m).reduce((a, r) => a + r.valor, 0);
+    const fat = _getFaturaMes(y, m).reduce((a, f) => a + f.total, 0);
+    const avist = _getAvistaMes(y, m).reduce((a, e) => a + e.amount, 0);
+    const fix = _getDespesasFixasMes(y, m).reduce((a, d) => a + d.valorParcela, 0);
+    const lim = cats.reduce((a, c) => {
+      const catLimit = c.subcategories.reduce((b, s) => b + s.limit, 0);
+      if (st === 'futuro') return a + catLimit;
+      const spentMap = _getMesData(y, m).spentMap || {};
+      const catSpent = c.subcategories.reduce((b, s) => b + (spentMap[c.id + '_' + s.id] || 0), 0);
+      if (st === 'atual') return a + Math.max(catSpent, catLimit);
+      return a + catSpent;
+    }, 0);
+    acum += rec - fat - avist - fix - lim;
+  }
+  const proj = acum + totalInvestido;
+  const delta = proj - _plMeta;
+  const pct = _plMeta ? Math.round(proj / _plMeta * 100) : 0;
+  const ok = delta >= 0;
+  el.innerHTML = `
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+      <span style="font-size:11px;color:var(--text2)">Projeção: <strong style="color:${ok ? 'var(--green)' : 'var(--red)'};font-family:var(--font-mono)">${fmt(proj)}</strong></span>
+      <span style="font-size:11px;color:var(--text2)">Delta: <strong style="color:${ok ? 'var(--green)' : 'var(--red)'};font-family:var(--font-mono)">${fmt(delta, true)}</strong></span>
+      <span style="padding:3px 10px;border-radius:20px;font-size:10px;font-weight:700;background:${ok ? 'var(--green-bg)' : 'var(--red-bg)'};color:${ok ? 'var(--green)' : 'var(--red)'}">${ok ? '✅ Dentro da meta' : '⚠️ Abaixo da meta'} · ${pct}%</span>
+    </div>`;
+}
+
+function _updateMetaBarVisibility() {
+  const bar = document.getElementById('pl-meta-bar');
+  if (!bar) return;
+  bar.style.display = _plTab === 'anual' ? 'flex' : 'none';
+  if (_plTab === 'anual') {
+    const inp = document.getElementById('pl-meta-input');
+    if (inp && !inp.value && _plMeta) inp.value = _plMeta;
+    _renderPlMetaResult();
+  }
+}
+
+/* ══════════════════════════════════════════════════════
+   FINANCIAMENTOS
+   ══════════════════════════════════════════════════════ */
+let _selectedFin = null;
+
+function getFinanciamentos() { return ld(uKey('financiamentos'), []); }
+function saveFinanciamentos(fins) {
+  sv(uKey('financiamentos'), fins);
+  const base = {
+    cats: state.cats.map(c => ({...c, subcategories: c.subcategories.map(s => ({id: s.id, name: s.name, limit: s.limit}))})),
+    pays, receitas: state.receitas, despesasFixas: state.despesasFixas,
+    fcFlags: state.fcFlags, contas: getContas(), financiamentos: fins
+  };
+  fbSaveBase(uid(), base).catch(console.error);
+}
+
+function calcSaldoDevedor(fin, dataBase) {
+  const { valorFinanciado, taxaMensal, totalParcelas, dataInicio } = fin;
+  if (!valorFinanciado || !taxaMensal || !totalParcelas || !dataInicio) {
+    return { saldoHoje: 0, parcelaPaga: 0, parcelaRestante: 0, valorParcela: 0, totalJuros: 0, totalPago: 0 };
+  }
+  const taxa = taxaMensal / 100;
+  const pmt = valorFinanciado * taxa / (1 - Math.pow(1 + taxa, -totalParcelas));
+  const inicio = new Date(dataInicio + 'T12:00:00');
+  const base = dataBase || new Date();
+  const mesesPagos = Math.max(0, (base.getFullYear() - inicio.getFullYear()) * 12 + (base.getMonth() - inicio.getMonth()));
+  const parcelaPaga = Math.min(mesesPagos, totalParcelas);
+  const parcelaRestante = totalParcelas - parcelaPaga;
+  const saldoDevedor = parcelaRestante > 0 ? pmt * (1 - Math.pow(1 + taxa, -parcelaRestante)) / taxa : 0;
+  const totalPago = parcelaPaga * pmt;
+  const totalJuros = totalParcelas * pmt - valorFinanciado;
+  return {
+    saldoHoje: Math.round(saldoDevedor * 100) / 100,
+    parcelaPaga, parcelaRestante,
+    valorParcela: Math.round(pmt * 100) / 100,
+    totalJuros: Math.round(totalJuros * 100) / 100,
+    totalPago: Math.round(totalPago * 100) / 100
+  };
+}
+
+function renderFin() {
+  const fins = getFinanciamentos();
+  const list = document.getElementById('fin-list');
+  if (!fins.length) {
+    list.innerHTML = '<div class="empty">Nenhum financiamento.<br>Clique em + Novo para adicionar.</div>';
+    document.getElementById('fin-detail').innerHTML = '<div class="empty">Selecione um financiamento.</div>';
+    return;
+  }
+  list.innerHTML = fins.map(f => {
+    const { saldoHoje, parcelaPaga, parcelaRestante, valorParcela } = calcSaldoDevedor(f);
+    const pct = f.totalParcelas ? Math.round(parcelaPaga / f.totalParcelas * 100) : 0;
+    const sel = _selectedFin === f.id;
+    return `<div onclick="selectFin('${f.id}')" style="padding:12px 14px;border-bottom:1px solid var(--border);cursor:pointer;background:${sel ? 'var(--gold-bg)' : 'var(--bg)'};transition:background .15s">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+        <span style="font-size:16px">🏦</span>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:12px;font-weight:700;color:var(--text)">${f.nome}</div>
+          <div style="font-size:10px;color:var(--text3)">${parcelaPaga}/${f.totalParcelas} parcelas · ${fmt(valorParcela)}/mês</div>
+        </div>
+        <div style="text-align:right">
+          <div style="font-size:13px;font-weight:800;color:var(--red);font-family:var(--font-mono)">${fmt(saldoHoje)}</div>
+          <div style="font-size:9px;color:var(--text3)">saldo hoje</div>
+        </div>
+      </div>
+      <div style="height:3px;background:var(--bg5);border-radius:4px;overflow:hidden">
+        <div style="width:${pct}%;height:100%;background:${pct >= 100 ? 'var(--green)' : 'var(--gold)'};border-radius:4px"></div>
+      </div>
+    </div>`;
+  }).join('');
+  if (!_selectedFin && fins.length) _selectedFin = fins[0].id;
+  _renderFinDetail();
+}
+
+function selectFin(id) { _selectedFin = id; renderFin(); }
+
+function _renderFinDetail() {
+  const fins = getFinanciamentos();
+  const f = fins.find(x => x.id === _selectedFin);
+  const detail = document.getElementById('fin-detail');
+  if (!f) { detail.innerHTML = '<div class="empty">Selecione um financiamento.</div>'; return; }
+  const { saldoHoje, parcelaPaga, parcelaRestante, valorParcela, totalJuros, totalPago } = calcSaldoDevedor(f);
+  const pct = f.totalParcelas ? Math.round(parcelaPaga / f.totalParcelas * 100) : 0;
+
+  let tabelaRows = '';
+  const antecipacoes = [0, 1, 2, 3, 6, 12, 18, 24].filter(n => n <= parcelaRestante);
+  antecipacoes.forEach(extra => {
+    const parcelaRestanteNova = parcelaRestante - extra;
+    const taxa = f.taxaMensal / 100;
+    const pmt = valorParcela;
+    const saldoNovo = parcelaRestanteNova > 0 ? pmt * (1 - Math.pow(1 + taxa, -parcelaRestanteNova)) / taxa : 0;
+    const economia = saldoHoje - saldoNovo;
+    if (extra === 0) {
+      tabelaRows += `<tr style="background:var(--bg2)"><td style="padding:8px 10px;font-weight:700;font-size:11px">Hoje (sem antecipação)</td><td style="padding:8px 10px;text-align:right;font-family:var(--font-mono);font-size:11px">${fmt(saldoHoje)}</td><td style="padding:8px 10px;text-align:right;font-size:11px;color:var(--text3)">—</td><td style="padding:8px 10px;text-align:right;font-size:11px">${parcelaRestante} meses</td></tr>`;
+    } else {
+      tabelaRows += `<tr><td style="padding:7px 10px;font-size:11px">+${extra} parcela${extra > 1 ? 's' : ''}</td><td style="padding:7px 10px;text-align:right;font-family:var(--font-mono);font-size:11px;color:var(--red)">${fmt(saldoNovo)}</td><td style="padding:7px 10px;text-align:right;font-family:var(--font-mono);font-size:11px;color:var(--green)">-${fmt(economia)}</td><td style="padding:7px 10px;text-align:right;font-size:11px;color:var(--text3)">${parcelaRestanteNova} meses</td></tr>`;
+    }
+  });
+
+  detail.innerHTML = `
+    <div style="padding:14px 16px;border-bottom:1px solid var(--border);background:var(--bg2);display:flex;align-items:center;gap:12px">
+      <span style="font-size:26px">🏦</span>
+      <div style="flex:1">
+        <div style="font-size:15px;font-weight:800;color:var(--text)">${f.nome}</div>
+        <div style="font-size:11px;color:var(--text3)">${f.banco || ''} · ${f.taxaMensal}% a.m. · ${f.totalParcelas}x de ${fmt(valorParcela)}</div>
+      </div>
+      <button onclick="openFinModal('${f.id}')" style="padding:5px 12px;border:1px solid var(--border2);background:transparent;border-radius:var(--r);font-size:11px;color:var(--text2);cursor:pointer;font-family:var(--font)">✏️ Editar</button>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:14px 16px;border-bottom:1px solid var(--border)">
+      <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:12px">
+        <div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;font-weight:700;margin-bottom:4px">Saldo devedor hoje</div>
+        <div style="font-size:18px;font-weight:800;color:var(--red);font-family:var(--font-mono)">${fmt(saldoHoje)}</div>
+        <div style="font-size:9px;color:var(--text3);margin-top:2px">${parcelaRestante} parcelas restantes</div>
+      </div>
+      <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:12px">
+        <div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;font-weight:700;margin-bottom:4px">Parcela mensal</div>
+        <div style="font-size:18px;font-weight:800;color:var(--amber);font-family:var(--font-mono)">${fmt(valorParcela)}</div>
+        <div style="font-size:9px;color:var(--text3);margin-top:2px">${parcelaPaga}/${f.totalParcelas} pagas</div>
+      </div>
+      <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:12px">
+        <div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;font-weight:700;margin-bottom:4px">Total de juros</div>
+        <div style="font-size:18px;font-weight:800;color:var(--text);font-family:var(--font-mono)">${fmt(totalJuros)}</div>
+        <div style="font-size:9px;color:var(--text3);margin-top:2px">sobre ${fmt(f.valorFinanciado)}</div>
+      </div>
+    </div>
+    <div style="padding:12px 16px;border-bottom:1px solid var(--border)">
+      <div style="display:flex;justify-content:space-between;margin-bottom:6px">
+        <span style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em">Progresso</span>
+        <span style="font-size:10px;font-weight:700;color:var(--gold)">${pct}% pago</span>
+      </div>
+      <div style="height:8px;background:var(--bg5);border-radius:6px;overflow:hidden">
+        <div style="width:${pct}%;height:100%;background:linear-gradient(90deg,var(--gold),var(--green));border-radius:6px"></div>
+      </div>
+      <div style="display:flex;justify-content:space-between;margin-top:4px">
+        <span style="font-size:10px;color:var(--text3)">Pago: ${fmt(totalPago)}</span>
+        <span style="font-size:10px;color:var(--text3)">Restante: ${parcelaRestante} meses</span>
+      </div>
+    </div>
+    <div style="padding:14px 16px">
+      <div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px">🧮 Simulador de antecipação</div>
+      <div style="border:1px solid var(--border);border-radius:var(--rl);overflow:hidden">
+        <table style="width:100%;border-collapse:collapse">
+          <thead><tr style="background:var(--bg2)">
+            <th style="padding:8px 10px;text-align:left;font-size:9px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em">Cenário</th>
+            <th style="padding:8px 10px;text-align:right;font-size:9px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em">Saldo devedor</th>
+            <th style="padding:8px 10px;text-align:right;font-size:9px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em">Economia</th>
+            <th style="padding:8px 10px;text-align:right;font-size:9px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em">Tempo restante</th>
+          </tr></thead>
+          <tbody>${tabelaRows}</tbody>
+        </table>
+      </div>
+    </div>`;
+}
+
+function openFinModal(editId) {
+  const fins = getFinanciamentos();
+  const f = editId ? fins.find(x => x.id === editId) : null;
+  document.getElementById('modal-area').innerHTML = `<div class="overlay" onclick="closeModal()"><div class="modal" onclick="event.stopPropagation()" style="max-width:460px">
+    <h3>${f ? 'Editar financiamento' : 'Novo financiamento'}</h3>
+    <div class="mf"><label>Nome / Descrição</label><input id="fin-nome" value="${f?.nome || ''}" placeholder="Ex: Financiamento Carro, Imóvel..."></div>
+    <div class="mf"><label>Banco / Credor</label><input id="fin-banco" value="${f?.banco || ''}" placeholder="Ex: Bradesco, CEF..."></div>
+    <div class="mf"><label>Valor financiado (R$)</label><input id="fin-valor" type="number" min="0" step="100" value="${f?.valorFinanciado || ''}" placeholder="Ex: 50000"></div>
+    <div class="mf"><label>Taxa de juros mensal (%)</label><input id="fin-taxa" type="number" min="0" step="0.01" value="${f?.taxaMensal || ''}" placeholder="Ex: 1.5"></div>
+    <div class="mf"><label>Total de parcelas</label><input id="fin-parcelas" type="number" min="1" value="${f?.totalParcelas || ''}" placeholder="Ex: 48"></div>
+    <div class="mf"><label>Data da 1ª parcela</label><input id="fin-inicio" type="date" value="${f?.dataInicio || ''}"></div>
+    <div class="mf"><label>Forma de pagamento</label><select id="fin-pay">${pays.map(p => `<option value="${p.name}" ${f?.pagamento === p.name ? 'selected' : ''}>${p.icon} ${p.name}</option>`).join('')}</select></div>
+    <div class="mf"><label>Categoria no P&L</label><select id="fin-cat">
+      <option value="moradia_fix" ${f?.categoria === 'moradia_fix' ? 'selected' : ''}>🏠 Moradia</option>
+      <option value="veiculo" ${f?.categoria === 'veiculo' ? 'selected' : ''}>🚗 Veículo</option>
+      <option value="emprestimo" ${(f?.categoria === 'emprestimo' || !f?.categoria) ? 'selected' : ''}>🏦 Empréstimo</option>
+      <option value="outros_fix" ${f?.categoria === 'outros_fix' ? 'selected' : ''}>📦 Outros</option>
+    </select></div>
+    <div class="mbtns">
+      ${f ? `<button class="md" onclick="deleteFin('${f.id}')">Excluir</button>` : ''}
+      <button class="mc" onclick="closeModal()">Cancelar</button>
+      <button class="ms" onclick="saveFin(${f ? `'${f.id}'` : 'null'})">Salvar</button>
+    </div>
+  </div></div>`;
+}
+
+function saveFin(editId) {
+  const nome = document.getElementById('fin-nome').value.trim();
+  if (!nome) { alert('Informe o nome.'); return; }
+  const banco = document.getElementById('fin-banco').value.trim();
+  const valorFinanciado = parseFloat(document.getElementById('fin-valor').value) || 0;
+  const taxaMensal = parseFloat(document.getElementById('fin-taxa').value) || 0;
+  const totalParcelas = parseInt(document.getElementById('fin-parcelas').value) || 0;
+  const dataInicio = document.getElementById('fin-inicio').value;
+  const pagamento = document.getElementById('fin-pay').value;
+  const categoria = document.getElementById('fin-cat').value;
+  if (!valorFinanciado || !taxaMensal || !totalParcelas) { alert('Preencha valor, taxa e parcelas.'); return; }
+  const { valorParcela } = calcSaldoDevedor({ valorFinanciado, taxaMensal, totalParcelas, dataInicio });
+  const fins = getFinanciamentos();
+  if (editId) {
+    const idx = fins.findIndex(f => f.id === editId);
+    if (idx === -1) return;
+    fins[idx] = { ...fins[idx], nome, banco, valorFinanciado, taxaMensal, totalParcelas, dataInicio, pagamento, categoria, valorParcela };
+  } else {
+    const id = 'fin' + Date.now();
+    fins.push({ id, nome, banco, valorFinanciado, taxaMensal, totalParcelas, dataInicio, pagamento, categoria, valorParcela });
+    _selectedFin = id;
+  }
+  _syncFinToDespesasFixas(fins);
+  saveFinanciamentos(fins);
+  closeModal(); renderFin();
+}
+
+function deleteFin(id) {
+  if (!confirm('Excluir este financiamento?')) return;
+  const fins = getFinanciamentos().filter(f => f.id !== id);
+  _syncFinToDespesasFixas(fins);
+  saveFinanciamentos(fins);
+  if (_selectedFin === id) _selectedFin = fins[0]?.id || null;
+  closeModal(); renderFin();
+}
+
+function _syncFinToDespesasFixas(fins) {
+  state.despesasFixas = state.despesasFixas.filter(d => !d._finId);
+  fins.forEach(f => {
+    if (!f.dataInicio || !f.valorParcela) return;
+    state.despesasFixas.push({
+      id: 'df_fin_' + f.id, _finId: f.id,
+      descricao: f.nome + (f.banco ? ' (' + f.banco + ')' : ''),
+      categoria: f.categoria || 'emprestimo',
+      valorParcela: f.valorParcela,
+      pagamento: f.pagamento || '',
+      diaVencimento: 1,
+      totalParcelas: f.totalParcelas,
+      startDate: f.dataInicio,
+      observacao: 'Gerado pelo módulo Financiamentos'
+    });
+  });
+  saveState(state);
+}
+
 
 /* ── INIT ── */
 if(sessionStorage.getItem('ze_access_ok')){
