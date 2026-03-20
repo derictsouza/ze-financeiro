@@ -1401,6 +1401,23 @@ function getReceitasMes(){
     const d=new Date(r.date+'T12:00:00'); return d.getFullYear()===yr&&d.getMonth()===mo;
   });
 }
+// Calcula o valor da parcela de um financiamento para um mês específico
+// Para SAC: parcela = amortização + juros sobre saldo devedor naquele mês
+// Para Price/Simples: parcela fixa
+function _calcParcelaMes(d, parcelaNum){
+  // Only financiamentos have _finId and sistema
+  if(!d._finId || !d.sistema || d.sistema !== 'sac') return d.valorParcela;
+  const fins = ld(uKey('financiamentos'), []);
+  const f = fins.find(x => x.id === d._finId);
+  if(!f) return d.valorParcela;
+  const taxa = f.taxaMensal / 100;
+  const amort = f.valorFinanciado / f.totalParcelas;
+  // Saldo devedor antes da parcela parcelaNum (1-based)
+  const saldoAntes = f.valorFinanciado - amort * (parcelaNum - 1);
+  const juros = saldoAntes * taxa;
+  return Math.round((amort + juros) * 100) / 100;
+}
+
 function getDespesasFixasMes(){
   return state.despesasFixas.filter(d=>{
     const start=new Date(d.startDate+'T12:00:00');
@@ -1412,7 +1429,8 @@ function getDespesasFixasMes(){
     if(d.totalParcelas){
       const start=new Date(d.startDate+'T12:00:00');
       const elapsed=(yr-start.getFullYear())*12+(mo-start.getMonth());
-      return{...d,parcelaAtual:elapsed+1};
+      const parcelaAtual=elapsed+1;
+      return{...d, parcelaAtual, valorParcela:_calcParcelaMes(d, parcelaAtual)};
     }
     return d;
   });
@@ -2047,7 +2065,8 @@ function _getDespesasFixasMes(y, m){
     if(d.totalParcelas){
       const start=new Date(d.startDate+'T12:00:00');
       const elapsed=(y-start.getFullYear())*12+(m-start.getMonth());
-      return{...d,parcelaAtual:elapsed+1};
+      const parcelaAtual=elapsed+1;
+      return{...d, parcelaAtual, valorParcela:_calcParcelaMes(d, parcelaAtual)};
     }
     return d;
   });
