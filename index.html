@@ -1260,7 +1260,11 @@ function loginUser(profile){
       if(base.despesasFixas)sv(uKey('despesas_fixas'),base.despesasFixas);
       if(base.fcFlags)sv(uKey('fc_flags'),base.fcFlags);
       if(base.contas)sv(uKey('contas'),base.contas);
-      if(base.financiamentos)sv(uKey('financiamentos'),base.financiamentos);
+      if(base.financiamentos){
+      sv(uKey('financiamentos'),base.financiamentos);
+      // Re-sync fins to despesasFixas to ensure sistema field is present
+      // (fixes financiamentos saved before sistema field was added)
+    }
     }
     // Load current month data from Firebase
     // Sync current AND previous month (needed for fatura calculation)
@@ -1276,6 +1280,9 @@ function loginUser(profile){
       if(txs&&txs.length)sv(getContaTxKey(c.id),txs);
     }
     state=loadState(); pays=ld(uKey('pays'),DEF_PAYS); selectedPay=null; selectedConta=null;
+    // Re-sync financiamentos so SAC parcelas are always dynamic
+    const finsLS=ld(uKey('financiamentos'),[]);
+    if(finsLS.length){_syncFinToDespesasFixas(finsLS); state=loadState();}
     _showSyncBanner('✅ Dados sincronizados!','#1A9E6E');
     setTimeout(_hideSyncBanner,2000);
     goTo('limites');
@@ -1283,6 +1290,8 @@ function loginUser(profile){
     console.warn('Firebase sync failed:',err.message);
     // Fallback: load local data and show anyway
     state=loadState(); pays=ld(uKey('pays'),DEF_PAYS); selectedPay=null; selectedConta=null;
+    const finsLS2=ld(uKey('financiamentos'),[]);
+    if(finsLS2.length){_syncFinToDespesasFixas(finsLS2); state=loadState();}
     _showSyncBanner('⚠️ Offline — dados locais','#D97706');
     setTimeout(_hideSyncBanner,3000);
     goTo('limites');
@@ -1405,16 +1414,17 @@ function getReceitasMes(){
 // Para SAC: parcela = amortização + juros sobre saldo devedor naquele mês
 // Para Price/Simples: parcela fixa
 function _calcParcelaMes(d, parcelaNum){
-  // Only financiamentos have _finId and sistema
-  if(!d._finId || !d.sistema || d.sistema !== 'sac') return d.valorParcela;
+  // Só financiamentos SAC têm parcelas variáveis
+  const sis = d.sistema || 'price';
+  if(!d._finId || sis !== 'sac') return d.valorParcela;
   const fins = ld(uKey('financiamentos'), []);
   const f = fins.find(x => x.id === d._finId);
   if(!f) return d.valorParcela;
   const taxa = f.taxaMensal / 100;
   const amort = f.valorFinanciado / f.totalParcelas;
-  // Saldo devedor antes da parcela parcelaNum (1-based)
+  // Saldo devedor ANTES da parcela N (1-based)
   const saldoAntes = f.valorFinanciado - amort * (parcelaNum - 1);
-  const juros = saldoAntes * taxa;
+  const juros = Math.round(saldoAntes * taxa * 100) / 100;
   return Math.round((amort + juros) * 100) / 100;
 }
 
@@ -3460,8 +3470,12 @@ function _syncFinToDespesasFixas(fins) {
   state.despesasFixas = state.despesasFixas.filter(d => !d._finId);
   fins.forEach(f => {
     if (!f.dataInicio || !f.valorParcela) return;
+    // valorParcela aqui é só o valor base (primeira parcela ou fixo)
+    // _calcParcelaMes recalcula dinamicamente para SAC mês a mês
     state.despesasFixas.push({
-      id: 'df_fin_' + f.id, _finId: f.id,
+      id: 'df_fin_' + f.id,
+      _finId: f.id,
+      sistema: f.sistema || 'price',   // ← campo necessário para _calcParcelaMes
       descricao: f.nome + (f.banco ? ' (' + f.banco + ')' : ''),
       categoria: f.categoria || 'emprestimo',
       valorParcela: f.valorParcela,
