@@ -677,12 +677,11 @@ body{
   .mlbl{min-width:76px}
 }
 </style>
-<!-- Firebase SDK -->
-<script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-  import { getFirestore, doc, getDoc, setDoc, collection, getDocs, deleteDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
-
-  const firebaseConfig = {
+<!-- Firebase SDK (compat - synchronous global) -->
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<script>
+  const _fbConfig = {
     apiKey: "AIzaSyCmJUxAB2h5wx-U1O24hfrJZt1kbp8TP_Q",
     authDomain: "ze-financeiro-97924.firebaseapp.com",
     projectId: "ze-financeiro-97924",
@@ -690,37 +689,26 @@ body{
     messagingSenderId: "16356446112",
     appId: "1:16356446112:web:d2cafa2dbd0c596a2cdec5"
   };
+  firebase.initializeApp(_fbConfig);
+  const _db = firebase.firestore();
 
-  const app = initializeApp(firebaseConfig);
-  const db  = getFirestore(app);
+  // path = "collection/docId" (always even segments)
+  function _fbRef(path){ return path.split('/').reduce((r,seg,i)=>i%2===0?r.collection(seg):r.doc(seg), _db); }
 
-  // ── Expose DB helpers globally ──
-  window._db = db;
-  // Helper: path string → alternating collection/doc segments for Firestore
-  function pathToRef(path){
-    const parts = path.split('/');
-    // Firestore: doc(db, col, docId, col2, docId2, ...)
-    return doc(db, ...parts);
-  }
-  window._db = db;
-  window._fbGetDoc  = async (path) => {
-    try {
-      const s = await getDoc(pathToRef(path));
-      return s.exists() ? s.data() : null;
-    } catch(e){ console.error('[FB GET]', path, e.message); return null; }
+  window._fbGetDoc = async (path) => {
+    try { const s = await _fbRef(path).get(); return s.exists ? s.data() : null; }
+    catch(e){ console.error('[FB GET]', path, e.message); return null; }
   };
-  window._fbSetDoc  = async (path, data) => {
-    try {
-      await setDoc(pathToRef(path), data);
-      return true;
-    } catch(e){ console.error('[FB SET]', path, e.message); return false; }
+  window._fbSetDoc = async (path, data) => {
+    try { await _fbRef(path).set(data, {merge:true}); return true; }
+    catch(e){ console.error('[FB SET]', path, e.message); return false; }
   };
-  window._fbDelDoc  = async (path) => {
-    try { await deleteDoc(pathToRef(path)); return true; }
+  window._fbDelDoc = async (path) => {
+    try { await _fbRef(path).delete(); return true; }
     catch(e){ console.error('[FB DEL]', path, e.message); return false; }
   };
-  window._fbReady   = true;
-  document.dispatchEvent(new Event('firebase-ready'));
+  window._fbReady = true;
+  console.log('[FB] Firebase compat ready');
 </script>
 </head>
 <body>
