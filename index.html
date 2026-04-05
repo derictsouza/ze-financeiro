@@ -231,7 +231,7 @@ body{
 .nt.active{color:var(--gold);border-bottom-color:var(--gold);background:var(--gold-bg)}
 
 /* ── PAGES ── */
-.page{flex:1;overflow:hidden;display:none}
+.page{flex:1;overflow:hidden;display:none;min-height:0}
 .page.active{display:flex}
 
 .phdr{padding:11px 14px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;background:var(--bg);z-index:2;flex-shrink:0}
@@ -357,7 +357,7 @@ body{
 /* ════════════════════════
    P&L
 ════════════════════════ */
-.pl-page{flex-direction:column;overflow-y:auto;padding:16px;gap:14px}
+.pl-page{flex-direction:column;overflow-y:auto;overflow-x:hidden;padding:16px;gap:14px;min-height:0}
 .pl-hero{background:var(--bg2);border:1px solid var(--border);border-radius:var(--rl);padding:16px;display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
 .plhc{text-align:center;padding:14px 12px;background:var(--bg);border-radius:var(--r);border:1px solid var(--border)}
 .plhl{font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:0.10em;margin-bottom:8px;font-weight:700}
@@ -488,7 +488,7 @@ body{
 /* ════════════════════════
    CONFIG
 ════════════════════════ */
-.cfg-page{flex-direction:column;overflow-y:auto;padding:16px;gap:14px}
+.cfg-page{flex-direction:column;overflow-y:auto;overflow-x:hidden;padding:16px;gap:14px;min-height:0}
 .cfg-sec{border:1px solid var(--border);border-radius:var(--rl);overflow:hidden}
 .cfg-sh{padding:13px 16px;background:var(--bg2);border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center}
 .cfg-st{font-size:13px;font-weight:700;color:var(--text)}
@@ -676,6 +676,129 @@ body{
   .topbar .tr{gap:6px}
   .mlbl{min-width:76px}
 }
+
+/* ════════════════════════════════════════
+   PROJETOS
+════════════════════════════════════════ */
+.proj-card{padding:12px 14px;border-bottom:1px solid var(--border);cursor:pointer;transition:background .15s}
+.proj-card:hover{background:var(--bg2)}
+.proj-card.sel{background:var(--gold-bg);border-left:3px solid var(--gold)}
+.proj-toggle{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:3px 10px;border-radius:20px;font-size:10px;font-weight:700;
+  cursor:pointer;border:1px solid var(--border2);background:var(--bg2);
+  font-family:var(--font);transition:all .15s;
+}
+.proj-toggle.on{background:var(--green-bg);border-color:var(--green-border);color:var(--green)}
+.proj-toggle.off{color:var(--text3)}
+.proj-flow-row{display:flex;align-items:center;padding:7px 0;border-bottom:1px solid var(--border3);gap:10px}
+.proj-flow-row:last-child{border-bottom:none}
+
+/* ════════════════════════════════════════
+   ONBOARDING WIZARD
+════════════════════════════════════════ */
+.ob-screen{
+  position:fixed;inset:0;background:var(--bg3);
+  display:flex;align-items:center;justify-content:center;
+  z-index:200;padding:16px;
+  overflow-y:auto;
+}
+.ob-card{
+  background:var(--bg);border:1px solid var(--border);
+  border-radius:var(--rxl);width:100%;max-width:560px;
+  box-shadow:var(--shadow);
+  animation:fadeUp 0.4s ease both;
+  overflow:hidden;
+}
+.ob-header{
+  padding:20px 24px 0;
+  border-bottom:1px solid var(--border);
+  padding-bottom:16px;
+}
+.ob-progress{
+  display:flex;gap:4px;margin-bottom:14px;
+}
+.ob-step{
+  flex:1;height:3px;border-radius:4px;background:var(--bg5);
+  transition:background 0.3s;
+}
+.ob-step.done{background:var(--gold);}
+.ob-step.active{background:var(--navy);}
+.ob-title{font-size:18px;font-weight:800;color:var(--text);letter-spacing:-0.02em}
+.ob-sub{font-size:12px;color:var(--text2);margin-top:4px}
+.ob-body{padding:20px 24px;display:flex;flex-direction:column;gap:12px;max-height:60vh;overflow-y:auto}
+.ob-footer{padding:16px 24px;border-top:1px solid var(--border);display:flex;gap:10px;justify-content:space-between;align-items:center}
+.ob-btn-next{
+  padding:10px 24px;background:var(--navy);border:none;
+  border-radius:var(--r);font-size:13px;font-weight:700;
+  color:var(--gold);cursor:pointer;font-family:var(--font);
+  transition:background 0.15s;
+}
+.ob-btn-next:hover{background:var(--navy-soft)}
+.ob-btn-back{
+  padding:10px 16px;background:transparent;
+  border:1px solid var(--border2);border-radius:var(--r);
+  font-size:12px;color:var(--text2);cursor:pointer;font-family:var(--font);
+  transition:all 0.15s;
+}
+.ob-btn-back:hover{background:var(--bg2);color:var(--text)}
+.ob-skip{font-size:11px;color:var(--text3);cursor:pointer;text-decoration:underline}
+.ob-skip:hover{color:var(--text2)}
+.ob-group{display:flex;flex-direction:column;gap:4px}
+.ob-label{font-size:9px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.10em}
+.ob-input{
+  padding:10px 12px;border:1px solid var(--border2);
+  border-radius:var(--r);font-size:13px;background:var(--bg);
+  color:var(--text);outline:none;width:100%;font-family:var(--font);
+  transition:border-color 0.15s,box-shadow 0.15s;
+}
+.ob-input:focus{border-color:var(--gold);box-shadow:0 0 0 3px var(--gold-bg)}
+.ob-row{display:flex;gap:10px}
+.ob-toggle-group{display:flex;gap:8px;flex-wrap:wrap}
+.ob-toggle{
+  padding:8px 16px;border:1px solid var(--border2);
+  border-radius:20px;font-size:12px;font-weight:600;
+  color:var(--text2);background:var(--bg2);cursor:pointer;
+  transition:all 0.15s;font-family:var(--font);
+}
+.ob-toggle.sel{border-color:var(--gold);color:var(--gold-3);background:var(--gold-bg)}
+.ob-card-add{
+  padding:10px 14px;border:1px dashed var(--border2);
+  border-radius:var(--r);display:flex;align-items:center;
+  gap:8px;cursor:pointer;font-size:12px;color:var(--text2);
+  transition:all 0.15s;background:transparent;width:100%;
+  font-family:var(--font);
+}
+.ob-card-add:hover{border-color:var(--gold);color:var(--gold);background:var(--gold-bg)}
+.ob-item{
+  display:flex;align-items:center;gap:10px;
+  padding:10px 14px;background:var(--bg2);
+  border:1px solid var(--border);border-radius:var(--r);
+}
+.ob-item-del{
+  margin-left:auto;font-size:11px;color:var(--red);
+  cursor:pointer;padding:2px 6px;opacity:0.7;
+  border:none;background:transparent;font-family:var(--font);
+}
+.ob-item-del:hover{opacity:1}
+.ob-cat-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.ob-cat-card{
+  display:flex;align-items:center;gap:10px;
+  padding:10px 12px;border:1px solid var(--border);
+  border-radius:var(--r);cursor:pointer;background:var(--bg2);
+  transition:all 0.15s;
+}
+.ob-cat-card.sel{border-color:var(--gold);background:var(--gold-bg)}
+.ob-cat-card .ob-check{
+  width:18px;height:18px;border-radius:4px;border:1.5px solid var(--border2);
+  flex-shrink:0;display:flex;align-items:center;justify-content:center;
+  transition:all 0.15s;
+}
+.ob-cat-card.sel .ob-check{background:var(--gold);border-color:var(--gold);color:#fff;font-size:11px}
+.ob-limit-row{display:flex;align-items:center;gap:12px;padding:8px 0;border-bottom:1px solid var(--border3)}
+.ob-limit-row:last-child{border-bottom:none}
+.ob-summary-item{display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--border3)}
+.ob-summary-item:last-child{border-bottom:none}
 </style>
 <!-- Firebase SDK (compat - synchronous global) -->
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
@@ -762,6 +885,23 @@ body{
   </div>
 </div>
 
+<!-- ONBOARDING WIZARD -->
+<div class="ob-screen" id="ob-screen" style="display:none">
+  <div class="ob-card">
+    <div class="ob-header">
+      <div class="ob-progress" id="ob-progress"></div>
+      <div class="ob-title" id="ob-title"></div>
+      <div class="ob-sub" id="ob-sub"></div>
+    </div>
+    <div class="ob-body" id="ob-body"></div>
+    <div class="ob-footer">
+      <button class="ob-btn-back" id="ob-back" onclick="obBack()">← Voltar</button>
+      <span class="ob-skip" onclick="obSkip()">Pular tudo</span>
+      <button class="ob-btn-next" id="ob-next" onclick="obNext()">Próximo →</button>
+    </div>
+  </div>
+</div>
+
 <div id="modal-area"></div>
 
 <!-- APP -->
@@ -792,6 +932,7 @@ body{
     <button class="nt" id="nav-fc" onclick="goTo('fc')">💸 Fluxo de Caixa</button>
     <button class="nt" id="nav-banco" onclick="goTo('banco')">🏦 Contas</button>
     <button class="nt" id="nav-pag" onclick="goTo('pag')">💳 Faturas</button>
+    <button class="nt" id="nav-proj" onclick="goTo('proj')">🗂 Projetos</button>
     <button class="nt" id="nav-fin" onclick="goTo('fin')">🏦 Financiamentos</button>
     <button class="nt" id="nav-reg" onclick="goTo('reg')">➕ Registrar</button>
     <button class="nt" id="nav-cfg" onclick="goTo('cfg')">⚙️ Config</button>
@@ -990,14 +1131,43 @@ body{
         <button class="abtn" onclick="openContaModal()">+ Conta</button>
       </div>
       <div id="conta-cards" style="padding-bottom:10px"></div>
-      <div style="padding:10px 12px;border-top:0.5px solid var(--border);margin-top:auto;flex-shrink:0">
-        <div style="font-size:10px;color:var(--text2);margin-bottom:6px;text-transform:uppercase;letter-spacing:.05em;font-weight:600">Saldo consolidado</div>
-        <div id="saldo-total" style="font-size:22px;font-weight:600;color:var(--text)">R$ 0,00</div>
-        <div id="saldo-sub" style="font-size:10px;color:var(--text2);margin-top:2px"></div>
+      <div style="padding:10px 12px;border-top:1px solid var(--border);margin-top:auto;flex-shrink:0">
+        <div style="font-size:9px;color:var(--text3);margin-bottom:6px;text-transform:uppercase;letter-spacing:.08em;font-weight:700">Saldo consolidado</div>
+        <div id="saldo-total" style="font-size:22px;font-weight:700;color:var(--text);font-family:var(--font-mono)">R$ 0,00</div>
+        <div id="saldo-sub" style="font-size:10px;color:var(--text3);margin-top:2px"></div>
       </div>
     </div>
-    <div class="banco-right" id="banco-right">
-      <div class="empty">Selecione uma conta para ver o extrato.</div>
+    <!-- Painel direito: tabs Extrato / Patrimônio -->
+    <div style="flex:1;display:flex;flex-direction:column;overflow:hidden">
+      <div style="display:flex;border-bottom:1px solid var(--border);background:var(--bg);flex-shrink:0">
+        <button id="banco-tab-extrato" onclick="switchBancoTab('extrato')"
+          style="flex:1;border:none;background:transparent;cursor:pointer;font-size:10px;font-weight:700;height:40px;border-bottom:2px solid var(--gold);color:var(--gold);text-transform:uppercase;letter-spacing:.06em;font-family:var(--font)">
+          📄 Extrato
+        </button>
+        <button id="banco-tab-patrim" onclick="switchBancoTab('patrim')"
+          style="flex:1;border:none;background:transparent;cursor:pointer;font-size:10px;font-weight:700;height:40px;border-bottom:2px solid transparent;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;font-family:var(--font)">
+          🏦 Patrimônio
+        </button>
+      </div>
+      <div id="banco-right" style="flex:1;overflow-y:auto;display:flex;flex-direction:column">
+        <div class="empty">Selecione uma conta para ver o extrato.</div>
+      </div>
+      <div id="banco-patrim" style="flex:1;overflow-y:auto;display:none">
+      </div>
+    </div>
+  </div>
+
+  <!-- PROJETOS -->
+  <div class="page" id="page-proj" style="flex-direction:row;overflow:hidden">
+    <div style="width:300px;flex-shrink:0;border-right:1px solid var(--border);overflow-y:auto;display:flex;flex-direction:column">
+      <div class="phdr">
+        <span class="slbl2">Meus projetos</span>
+        <button class="abtn" onclick="openProjModal()">+ Novo</button>
+      </div>
+      <div id="proj-list" style="flex:1;overflow-y:auto"></div>
+    </div>
+    <div style="flex:1;overflow-y:auto" id="proj-detail">
+      <div class="empty">Selecione um projeto para ver detalhes.</div>
     </div>
   </div>
 
@@ -1035,14 +1205,20 @@ body{
       <div class="cfg-sh"><div><div class="cfg-st">Meu perfil</div><div class="cfg-ss" id="cfg-psub"></div></div></div>
       <div style="padding:12px 14px;display:flex;gap:8px;flex-wrap:wrap">
         <button onclick="editProfile()" style="padding:8px 14px;border:0.5px solid var(--border2);background:transparent;border-radius:var(--r);font-size:12px;cursor:pointer;color:var(--text2)">✏️ Editar perfil</button>
+        <button onclick="sv(uKey('onboardingCompleto'),false);obStart()" style="padding:8px 14px;border:0.5px solid var(--border2);background:transparent;border-radius:var(--r);font-size:12px;cursor:pointer;color:var(--text2)">🚀 Refazer onboarding</button>
         <button onclick="exportData()" style="padding:8px 14px;border:0.5px solid var(--border2);background:transparent;border-radius:var(--r);font-size:12px;cursor:pointer;color:var(--text2)">⬇ Exportar</button>
         <button onclick="importData()" style="padding:8px 14px;border:0.5px solid var(--border2);background:transparent;border-radius:var(--r);font-size:12px;cursor:pointer;color:var(--text2)">⬆ Importar</button>
         <button onclick="clearUserData()" style="padding:8px 14px;border:0.5px solid var(--red);background:transparent;border-radius:var(--r);font-size:12px;cursor:pointer;color:var(--red)">🗑 Limpar dados</button>
       </div>
     </div>
     <div class="cfg-sec">
-      <div class="cfg-sh"><div><div class="cfg-st">Categorias de limite</div></div><button class="abtn" onclick="goTo('limites')">Ir para Limites</button></div>
-      <div id="cfg-cats" style="padding:10px 14px;font-size:11px;color:var(--text2);line-height:1.9"></div>
+      <div class="cfg-sh"><div><div class="cfg-st">Categorias de limite</div><div class="cfg-ss">Ajuste limites e subcategorias</div></div>
+        <div style="display:flex;gap:6px">
+          <button class="rbtn" onclick="openModal('new-cat')">+ Categoria</button>
+          <button class="abtn" onclick="goTo('limites')">Ver Limites</button>
+        </div>
+      </div>
+      <div id="cfg-cats" style="padding:0"></div>
     </div>
   </div>
 </div>
@@ -1260,6 +1436,8 @@ function loginUser(profile){
       if(base.despesasFixas)sv(uKey('despesas_fixas'),base.despesasFixas);
       if(base.fcFlags)sv(uKey('fc_flags'),base.fcFlags);
       if(base.contas)sv(uKey('contas'),base.contas);
+      if(base.ajustesPatrimonio)sv(uKey('ajustes_patrim'),base.ajustesPatrimonio);
+      if(base.projetos)sv(uKey('projetos'),base.projetos);
       if(base.financiamentos){
       sv(uKey('financiamentos'),base.financiamentos);
       // Re-sync fins to despesasFixas to ensure sistema field is present
@@ -1285,7 +1463,8 @@ function loginUser(profile){
     if(finsLS.length){_syncFinToDespesasFixas(finsLS); state=loadState();}
     _showSyncBanner('✅ Dados sincronizados!','#1A9E6E');
     setTimeout(_hideSyncBanner,2000);
-    goTo('limites');
+    // Check onboarding
+    if(!obIsOnboardingDone()){obStart();}else{goTo('limites');}
   }).catch(err=>{
     console.warn('Firebase sync failed:',err.message);
     // Fallback: load local data and show anyway
@@ -1294,7 +1473,7 @@ function loginUser(profile){
     if(finsLS2.length){_syncFinToDespesasFixas(finsLS2); state=loadState();}
     _showSyncBanner('⚠️ Offline — dados locais','#D97706');
     setTimeout(_hideSyncBanner,3000);
-    goTo('limites');
+    if(!obIsOnboardingDone()){obStart();}else{goTo('limites');}
   });
 }
 function switchProfile(){
@@ -1475,6 +1654,7 @@ function goTo(pg){
   if(pg==='pag')renderPag();
   if(pg==='reg')renderReg();
   if(pg==='cfg')renderCfg();
+  if(pg==='proj')renderProj();
   if(pg==='fin')renderFin();
 }
 
@@ -1514,6 +1694,147 @@ function calcSaldoConta(conta){
     if(p?.contaId===conta.id) autoRec+=r.valor;
   });
   return Math.round((base+autoRec-autoDebit)*100)/100;
+}
+
+let _bancoTab='extrato';
+
+function switchBancoTab(tab){
+  _bancoTab=tab;
+  const extBtn=document.getElementById('banco-tab-extrato');
+  const patBtn=document.getElementById('banco-tab-patrim');
+  const extDiv=document.getElementById('banco-right');
+  const patDiv=document.getElementById('banco-patrim');
+  if(!extBtn||!patBtn||!extDiv||!patDiv)return;
+  extBtn.style.borderBottomColor=tab==='extrato'?'var(--gold)':'transparent';
+  extBtn.style.color=tab==='extrato'?'var(--gold)':'var(--text3)';
+  patBtn.style.borderBottomColor=tab==='patrim'?'var(--gold)':'transparent';
+  patBtn.style.color=tab==='patrim'?'var(--gold)':'var(--text3)';
+  extDiv.style.display=tab==='extrato'?'flex':'none';
+  patDiv.style.display=tab==='patrim'?'block':'none';
+  if(tab==='patrim')renderPatrimonio();
+}
+
+function getAjustesPatrimonio(){return ld(uKey('ajustes_patrim'),[]);}
+function saveAjustesPatrimonio(a){sv(uKey('ajustes_patrim'),a);fbSaveBase(uid(),{cats:state.cats.map(c=>({...c,subcategories:c.subcategories.map(s=>({id:s.id,name:s.name,limit:s.limit}))})),pays,receitas:state.receitas,despesasFixas:state.despesasFixas,fcFlags:state.fcFlags,contas:getContas(),ajustesPatrimonio:a}).catch(console.error);}
+
+function renderPatrimonio(){
+  const div=document.getElementById('banco-patrim'); if(!div)return;
+  const contas=getContas();
+  const ajustes=getAjustesPatrimonio();
+
+  // Build rows
+  let saldoBrutoCalc=0, saldoBrutoReal=0;
+  const rows=contas.map(c=>{
+    const calc=calcSaldoConta(c);
+    const real=c.saldoReal??null;
+    const delta=real!==null?Math.round((real-calc)*100)/100:null;
+    saldoBrutoCalc=Math.round((saldoBrutoCalc+calc)*100)/100;
+    if(real!==null)saldoBrutoReal=Math.round((saldoBrutoReal+real)*100)/100;
+    return{c,calc,real,delta};
+  });
+
+  const totalAjustes=ajustes.reduce((a,aj)=>a+aj.valor,0);
+  const saldoFinalCalc=Math.round((saldoBrutoCalc+totalAjustes)*100)/100;
+  const saldoFinalReal=saldoBrutoReal?Math.round((saldoBrutoReal+totalAjustes)*100)/100:null;
+
+  const fmtDelta=(d)=>{
+    if(d===null)return'<span style="color:var(--text3)">—</span>';
+    const col=d>0?'var(--green)':d<0?'var(--red)':'var(--text3)';
+    return`<span style="color:${col};font-family:var(--font-mono);font-weight:700">${fmt(d,true)}</span>`;
+  };
+
+  div.innerHTML=`
+    <div style="padding:16px">
+      <!-- Tabela de contas -->
+      <div style="border:1px solid var(--border);border-radius:var(--rl);overflow:hidden;margin-bottom:14px">
+        <div style="display:grid;grid-template-columns:1fr 130px 130px 100px;background:var(--bg2);border-bottom:1px solid var(--border);padding:8px 14px">
+          <div style="font-size:9px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.08em">Conta</div>
+          <div style="font-size:9px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;text-align:right">Calculado</div>
+          <div style="font-size:9px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;text-align:right">Real (banco)</div>
+          <div style="font-size:9px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;text-align:right">Delta</div>
+        </div>
+        ${rows.map(({c,calc,real,delta})=>`
+          <div style="display:grid;grid-template-columns:1fr 130px 130px 100px;padding:10px 14px;border-bottom:1px solid var(--border3);align-items:center">
+            <div style="display:flex;align-items:center;gap:8px">
+              <span style="font-size:16px">${c.icon||'🏦'}</span>
+              <div>
+                <div style="font-size:12px;font-weight:600;color:var(--text)">${c.nome}</div>
+                <div style="font-size:10px;color:var(--text3)">${c.banco}</div>
+              </div>
+            </div>
+            <div style="text-align:right;font-size:13px;font-weight:700;color:${calc>=0?'var(--green)':'var(--red)'};font-family:var(--font-mono)">${fmt(calc)}</div>
+            <div style="text-align:right">
+              <input type="number" step="0.01" value="${real??''}" placeholder="—"
+                onchange="updateSaldoReal('${c.id}',this.value)"
+                style="width:120px;padding:5px 8px;border:1px solid var(--border2);border-radius:var(--r);font-size:12px;background:var(--bg);color:var(--text);font-family:var(--font-mono);text-align:right;outline:none">
+            </div>
+            <div style="text-align:right">${fmtDelta(delta)}</div>
+          </div>`).join('')}
+        <!-- Saldo Bruto -->
+        <div style="display:grid;grid-template-columns:1fr 130px 130px 100px;padding:10px 14px;background:var(--bg2);border-bottom:1px solid var(--border);align-items:center">
+          <div style="font-size:12px;font-weight:800;color:var(--text)">💰 Saldo Bruto</div>
+          <div style="text-align:right;font-size:14px;font-weight:800;color:${saldoBrutoCalc>=0?'var(--green)':'var(--red)'};font-family:var(--font-mono)">${fmt(saldoBrutoCalc)}</div>
+          <div style="text-align:right;font-size:14px;font-weight:800;color:${saldoBrutoReal>=0?'var(--green)':'var(--red)'};font-family:var(--font-mono)">${saldoBrutoReal?fmt(saldoBrutoReal):'—'}</div>
+          <div style="text-align:right">${fmtDelta(saldoBrutoReal?Math.round((saldoBrutoReal-saldoBrutoCalc)*100)/100:null)}</div>
+        </div>
+      </div>
+
+      <!-- Ajustes (colchão) -->
+      <div style="border:1px solid var(--border);border-radius:var(--rl);overflow:hidden;margin-bottom:14px">
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:var(--bg2);border-bottom:1px solid var(--border)">
+          <span style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.08em">⚖️ Ajustes (colchão)</span>
+          <button class="abtn" onclick="addAjustePatrim()">+ Ajuste</button>
+        </div>
+        ${ajustes.length?ajustes.map((aj,i)=>`
+          <div style="display:flex;align-items:center;gap:10px;padding:9px 14px;border-bottom:1px solid var(--border3)">
+            <div style="flex:1;font-size:12px;color:var(--text)">${aj.nome}</div>
+            <div style="font-size:13px;font-weight:700;color:${aj.valor>=0?'var(--green)':'var(--red)'};font-family:var(--font-mono)">${fmt(aj.valor,true)}</div>
+            <button onclick="delAjustePatrim(${i})" style="border:none;background:transparent;color:var(--red);cursor:pointer;font-size:12px;opacity:0.6;padding:2px 4px">✕</button>
+          </div>`).join('')
+        :`<div class="empty" style="padding:20px">Nenhum ajuste. Use para valores que não são seus (ex: dinheiro guardado para terceiros).</div>`}
+        ${ajustes.length?`<div style="display:flex;align-items:center;justify-content:space-between;padding:9px 14px;background:var(--bg2)">
+          <span style="font-size:11px;font-weight:700;color:var(--text)">Total ajustes</span>
+          <span style="font-size:13px;font-weight:800;color:${totalAjustes>=0?'var(--green)':'var(--red)'};font-family:var(--font-mono)">${fmt(totalAjustes,true)}</span>
+        </div>`:''}
+      </div>
+
+      <!-- Saldo Final -->
+      <div style="border:1px solid var(--gold-border-strong);border-radius:var(--rl);overflow:hidden;background:var(--gold-bg)">
+        <div style="display:grid;grid-template-columns:1fr 130px 130px 100px;padding:14px;align-items:center">
+          <div style="font-size:14px;font-weight:800;color:var(--gold-3)">🏆 Saldo Final</div>
+          <div style="text-align:right;font-size:16px;font-weight:800;color:${saldoFinalCalc>=0?'var(--green)':'var(--red)'};font-family:var(--font-mono)">${fmt(saldoFinalCalc)}</div>
+          <div style="text-align:right;font-size:16px;font-weight:800;color:${saldoFinalReal&&saldoFinalReal>=0?'var(--green)':'var(--red)'};font-family:var(--font-mono)">${saldoFinalReal?fmt(saldoFinalReal):'—'}</div>
+          <div style="text-align:right">${fmtDelta(saldoFinalReal?Math.round((saldoFinalReal-saldoFinalCalc)*100)/100:null)}</div>
+        </div>
+      </div>
+    </div>`;
+}
+
+function updateSaldoReal(contaId, val){
+  const contas=getContas();
+  const idx=contas.findIndex(c=>c.id===contaId); if(idx===-1)return;
+  const parsed=parseFloat(val);
+  contas[idx].saldoReal=isNaN(parsed)?null:parsed;
+  saveContas(contas);
+  renderPatrimonio();
+}
+
+function addAjustePatrim(){
+  const nome=prompt('Nome do ajuste (ex: Dinheiro da Vitória, Reserva mãe):'); if(!nome)return;
+  const val=parseFloat(prompt('Valor (use − para negativo, ex: -2500):'));
+  if(isNaN(val)){alert('Valor inválido');return;}
+  const aj=getAjustesPatrimonio();
+  aj.push({id:'aj'+Date.now(),nome,valor:val});
+  saveAjustesPatrimonio(aj);
+  renderPatrimonio();
+}
+
+function delAjustePatrim(i){
+  if(!confirm('Remover este ajuste?'))return;
+  const aj=getAjustesPatrimonio();
+  aj.splice(i,1);
+  saveAjustesPatrimonio(aj);
+  renderPatrimonio();
 }
 
 function renderBanco(){
@@ -2377,6 +2698,49 @@ function renderPLAnual(){
     rows+=`<tr class="row-saldo" style="background:rgba(124,58,237,0.06)"><td style="color:#5B21B6;font-weight:700">🏦 Patrimônio (acum + investido)</td>${saldoRow.map(({acum,st})=>{const pat=acum+totalInvestido;return`<td class="${st==='atual'?'mes-atual':''} ${st==='futuro'?'proj':(pat>=0?'pos':'neg')}" style="font-weight:700;color:#7C3AED">${fmt(pat,true)}</td>`;}).join('')}<td></td></tr>`;
   }
 
+  // ── PROJETOS ATIVOS ──
+  const projsAtivos = getProjetos().filter(p=>p.ativo);
+  if(projsAtivos.length){
+    rows+=`<tr class="row-hdr"><td>🗂 PROJETOS (simulação)</td>${Array(12).fill('<td></td>').join('')}<td></td></tr>`;
+    let projTotalAnual=0;
+    projsAtivos.forEach(proj=>{
+      const fluxo=_gerarFluxoProj(proj);
+      const vals=[];
+      for(let m=0;m<12;m++){
+        const st=_mesSt(y,m);
+        const v=fluxo.filter(f=>f.yr===y&&f.mo===m).reduce((a,f)=>a+f.valor,0);
+        vals.push({v,st}); projTotalAnual+=v;
+      }
+      const tipo=PROJ_TIPOS[proj.tipo]||{icon:'📦'};
+      rows+=`<tr class="row-indent"><td>${tipo.icon} ${proj.nome}</td>${vals.map(({v,st})=>`<td class="${st==='atual'?'mes-atual':''} ${v>0?(st==='futuro'?'proj':'neg'):''}">${v>0?fmt(v):'—'}</td>`).join('')}<td class="neg">${projTotalAnual>0?fmt(projTotalAnual):'—'}</td></tr>`;
+    });
+    // Totais dos projetos por mês
+    const projRow=[];
+    for(let m=0;m<12;m++){
+      const v=_getProjCustoMes(y,m);
+      projRow.push({v,st:_mesSt(y,m)});
+    }
+    const totProj=projRow.reduce((a,x)=>a+x.v,0);
+    rows+=`<tr class="row-total"><td>Total projetos</td>${projRow.map(({v,st})=>`<td class="${st==='atual'?'mes-atual':''} ${v>0?(st==='futuro'?'proj':'neg'):''}">${v>0?fmt(v):'—'}</td>`).join('')}<td class="neg">${totProj>0?fmt(totProj):'—'}</td></tr>`;
+
+    // Saldo com projetos
+    const saldoComProjRow=[];
+    let acumComProj=0;
+    for(let m=0;m<12;m++){
+      const st=_mesSt(y,m);
+      const saldoBase=saldoRow[m].saldo;
+      const projMes=_getProjCustoMes(y,m);
+      const saldoCP=saldoBase-projMes;
+      acumComProj+=saldoCP;
+      saldoComProjRow.push({saldo:saldoCP,acum:acumComProj,st});
+    }
+    const totSaldoCP=saldoComProjRow.reduce((a,x)=>a+x.saldo,0);
+    rows+=`<tr class="row-saldo" style="background:rgba(124,58,237,0.06)"><td style="color:#5B21B6;font-weight:700">💼 Saldo c/ projetos</td>${saldoComProjRow.map(({saldo,st})=>`<td class="${st==='atual'?'mes-atual':''} ${st==='futuro'?'proj':(saldo>=0?'pos':'neg')}" style="font-weight:700">${fmt(saldo,true)}</td>`).join('')}<td class="${totSaldoCP>=0?'pos':'neg'}" style="font-weight:700">${fmt(totSaldoCP,true)}</td></tr>`;
+    // Delta
+    rows+=`<tr class="row-saldo" style="border-top:2px solid var(--border)"><td style="color:var(--text2);font-size:10px">Saldo acumulado c/ projetos</td>${saldoComProjRow.map(({acum,st})=>`<td class="${st==='atual'?'mes-atual':''} ${st==='futuro'?'proj':(acum>=0?'pos':'neg')}" style="font-size:10px">${fmt(acum,true)}</td>`).join('')}<td></td></tr>`;
+    rows+=`<tr class="row-indent"><td style="font-size:10px;color:var(--text3)">△ Delta vs sem projetos</td>${saldoRow.map(({saldo},i)=>{const d=saldoComProjRow[i].saldo-saldo;return`<td class="${d>=0?'pos':'neg'}" style="font-size:10px">${fmt(d,true)}</td>`;}).join('')}<td></td></tr>`;
+  }
+
   document.getElementById('pl-anual-table').innerHTML=`
     <thead><tr>
       <th style="text-align:left;min-width:160px">Item</th>
@@ -2920,7 +3284,50 @@ function renderCfg(){
       <span class="pi-del" onclick="delPay(${i})">Excluir</span>
     </div>`;
   }).join('')||'<div style="padding:12px 14px;font-size:11px;color:var(--text2)">Nenhum método.</div>';
-  document.getElementById('cfg-cats').innerHTML=state.cats.map(c=>`${c.icon} <strong>${c.name}</strong> — ${c.subcategories.map(s=>s.name).join(', ')}`).join('<br>');
+  document.getElementById('cfg-cats').innerHTML=state.cats.map((c,ci)=>{
+    const total=c.subcategories.reduce((a,s)=>a+s.limit,0);
+    return`<div style="display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid var(--border3)">
+      <span style="font-size:16px;width:22px;text-align:center">${c.icon}</span>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:12px;font-weight:700;color:var(--text)">${c.name}</div>
+        <div style="font-size:10px;color:var(--text3);margin-top:2px">${c.subcategories.map(s=>`${s.name}: <strong style="color:var(--text2)">R$${s.limit}</strong>`).join(' · ')}</div>
+      </div>
+      <div style="font-size:12px;font-weight:700;color:var(--gold);font-family:var(--font-mono);white-space:nowrap">R$ ${total.toLocaleString('pt-BR')}</div>
+      <button onclick="openEditCatModal(${ci})" style="padding:4px 10px;border:1px solid var(--border2);background:transparent;border-radius:var(--r);font-size:10px;color:var(--text2);cursor:pointer;white-space:nowrap;font-family:var(--font)">✏️ Editar</button>
+    </div>`;
+  }).join('');
+}
+function openEditCatModal(ci){
+  const cat=state.cats[ci];
+  document.getElementById('modal-area').innerHTML=`<div class="overlay" onclick="closeModal()"><div class="modal" onclick="event.stopPropagation()" style="max-width:460px">
+    <h3>${cat.icon} Editar: ${cat.name}</h3>
+    <div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px">Limites por subcategoria</div>
+    ${cat.subcategories.map((s,si)=>`
+      <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border3)">
+        <span style="flex:1;font-size:13px;color:var(--text)">${s.name}</span>
+        <div style="display:flex;align-items:center;gap:6px">
+          <span style="font-size:11px;color:var(--text3)">R$</span>
+          <input id="ecm-lim-${si}" type="number" min="0" step="50" value="${s.limit}"
+            style="width:100px;padding:7px 10px;border:1px solid var(--border2);border-radius:var(--r);font-size:13px;background:var(--bg);color:var(--text);outline:none;font-family:var(--font-mono);text-align:right">
+        </div>
+        <button onclick="openModal('edit-sub',${ci},${si})" style="padding:4px 8px;border:1px solid var(--border2);background:transparent;border-radius:var(--r);font-size:10px;color:var(--blue);cursor:pointer">⋯</button>
+      </div>`).join('')}
+    <div style="margin-top:12px;padding:8px 0;border-top:1px solid var(--border)">
+      <button onclick="openModal('new-sub',${ci})" style="padding:6px 14px;border:1px solid var(--gold-border-strong);color:var(--gold-3);background:var(--gold-bg);border-radius:20px;font-size:10px;font-weight:700;cursor:pointer;font-family:var(--font)">+ Adicionar subcategoria</button>
+    </div>
+    <div class="mbtns">
+      <button class="mc" onclick="closeModal()">Cancelar</button>
+      <button class="ms" onclick="saveEditCatLimits(${ci})">Salvar limites</button>
+    </div>
+  </div></div>`;
+}
+function saveEditCatLimits(ci){
+  const cat=state.cats[ci];
+  cat.subcategories.forEach((s,si)=>{
+    const el=document.getElementById('ecm-lim-'+si);
+    if(el) s.limit=parseFloat(el.value)||0;
+  });
+  saveState(state); closeModal(); renderCfg(); renderLimites();
 }
 function addPay(){
   const name=document.getElementById('np2-name').value.trim(); if(!name)return;
@@ -3487,6 +3894,944 @@ function _syncFinToDespesasFixas(fins) {
     });
   });
   saveState(state);
+}
+
+
+
+/* ══════════════════════════════════════════════════════
+   ONBOARDING WIZARD
+   ══════════════════════════════════════════════════════ */
+
+const OB_STEPS = [
+  { id:'perfil',    title:'👋 Bem-vindo ao Zé Financeiro!', sub:'Vamos configurar tudo rapidinho. Primeiro, nos conte um pouco sobre você.' },
+  { id:'renda',     title:'💼 Sua renda',                   sub:'De onde vem o seu dinheiro todo mês?' },
+  { id:'contas',    title:'🏦 Suas contas bancárias',        sub:'Quais bancos você usa? Isso vai popular a aba Contas.' },
+  { id:'cartoes',   title:'💳 Seus cartões de crédito',      sub:'Quais cartões você usa? Informe o dia que fecha a fatura.' },
+  { id:'dividas',   title:'📋 Dívidas e parcelas em aberto', sub:'Tem algum parcelamento em andamento? (opcional)' },
+  { id:'categorias',title:'📊 Categorias de gastos',         sub:'Quais categorias você quer acompanhar?' },
+  { id:'limites',   title:'🎯 Limites mensais',              sub:'Defina quanto quer gastar em cada categoria por mês.' },
+  { id:'fim',       title:'🎉 Tudo configurado!',            sub:'Confira o resumo e comece a usar.' }
+];
+
+let _obStep = 0;
+let _obData = {
+  perfil:    { nome:'', idade:'', tipo:'CLT' },
+  renda:     { salario:'', diaSalario:'5', temAdiantamento:false, adiantamento:'', diaAdiantamento:'' },
+  contas:    [],
+  cartoes:   [],
+  dividas:   [],
+  categorias:[], // ids das cats selecionadas
+  limites:   {}  // catId -> limit
+};
+
+const OB_CATS_OPCOES = [
+  {id:'alimentacao', icon:'🍽', name:'Alimentação',  color:'#1D9E75',
+   subs:[{id:'mercado',name:'Mercado'},{id:'restaurante',name:'Restaurante'},{id:'delivery',name:'Delivery'}]},
+  {id:'transporte',  icon:'🚗', name:'Transporte',   color:'#185FA5',
+   subs:[{id:'combustivel',name:'Combustível'},{id:'uber',name:'Uber/99'},{id:'manutencao',name:'Manutenção'}]},
+  {id:'saude',       icon:'💊', name:'Saúde',         color:'#D4537E',
+   subs:[{id:'farmacia',name:'Farmácia'},{id:'consulta',name:'Consultas'}]},
+  {id:'lazer',       icon:'🎬', name:'Lazer',          color:'#7F77DD',
+   subs:[{id:'streaming',name:'Streaming/Cinema'},{id:'hobbies',name:'Hobbies'}]},
+  {id:'moradia',     icon:'🏠', name:'Moradia',        color:'#BA7517',
+   subs:[{id:'aluguel',name:'Aluguel'},{id:'contas',name:'Contas'},{id:'internet',name:'Internet'}]},
+  {id:'educacao',    icon:'📚', name:'Educação',       color:'#0891B2',
+   subs:[{id:'curso',name:'Cursos'},{id:'material',name:'Material'}]},
+  {id:'vestuario',   icon:'👕', name:'Vestuário',      color:'#7C3AED',
+   subs:[{id:'roupas',name:'Roupas'},{id:'calcados',name:'Calçados'}]},
+  {id:'outros',      icon:'📦', name:'Outros',         color:'#888780',
+   subs:[{id:'diversos',name:'Diversos'}]}
+];
+
+function obIsOnboardingDone(){
+  return ld(uKey('onboardingCompleto'), false);
+}
+
+function obStart(){
+  _obStep = 0;
+  // Pre-fill name from profile
+  _obData.perfil.nome = currentUser?.name || '';
+  _obData.categorias = ['alimentacao','transporte','saude','lazer','moradia','outros'];
+  document.getElementById('ob-screen').style.display = 'flex';
+  document.getElementById('app').classList.remove('visible');
+  obRender();
+}
+
+function obFinish(){
+  document.getElementById('ob-screen').style.display = 'none';
+  document.getElementById('app').classList.add('visible');
+}
+
+function obSkip(){
+  if(!confirm('Pular a configuração inicial? Você pode refazê-la depois em Config.')) return;
+  sv(uKey('onboardingCompleto'), true);
+  obApplyAll();
+  obFinish();
+  goTo('limites');
+}
+
+function obBack(){
+  if(_obStep === 0) return;
+  _obStep--;
+  obRender();
+}
+
+function obNext(){
+  if(!obValidate()) return;
+  obSaveStep();
+  if(_obStep === OB_STEPS.length - 1){
+    obApplyAll();
+    sv(uKey('onboardingCompleto'), true);
+    obFinish();
+    goTo('limites');
+    return;
+  }
+  _obStep++;
+  obRender();
+}
+
+function obValidate(){
+  const step = OB_STEPS[_obStep].id;
+  if(step === 'perfil'){
+    const nome = document.getElementById('ob-nome')?.value.trim();
+    if(!nome){ alert('Informe seu nome.'); return false; }
+  }
+  if(step === 'renda'){
+    const sal = parseFloat(document.getElementById('ob-salario')?.value);
+    if(!sal || sal <= 0){ alert('Informe o valor do seu salário.'); return false; }
+  }
+  return true;
+}
+
+function obSaveStep(){
+  const step = OB_STEPS[_obStep].id;
+  if(step === 'perfil'){
+    _obData.perfil.nome  = document.getElementById('ob-nome')?.value.trim() || '';
+    _obData.perfil.idade = document.getElementById('ob-idade')?.value.trim() || '';
+  }
+  if(step === 'renda'){
+    _obData.renda.salario       = document.getElementById('ob-salario')?.value || '';
+    _obData.renda.diaSalario    = document.getElementById('ob-dia-sal')?.value || '5';
+    _obData.renda.adiantamento  = document.getElementById('ob-adiant')?.value || '';
+    _obData.renda.diaAdiantamento = document.getElementById('ob-dia-adiant')?.value || '';
+  }
+  if(step === 'limites'){
+    _obData.categorias.forEach(catId=>{
+      const el = document.getElementById('ob-lim-'+catId);
+      if(el) _obData.limites[catId] = parseFloat(el.value)||0;
+    });
+  }
+}
+
+function obRender(){
+  const step = OB_STEPS[_obStep];
+  const total = OB_STEPS.length;
+
+  // Progress bar
+  document.getElementById('ob-progress').innerHTML = OB_STEPS.map((_,i)=>
+    `<div class="ob-step ${i<_obStep?'done':i===_obStep?'active':''}"></div>`
+  ).join('');
+
+  document.getElementById('ob-title').textContent = step.title;
+  document.getElementById('ob-sub').textContent   = step.sub;
+
+  // Back button
+  document.getElementById('ob-back').style.visibility = _obStep === 0 ? 'hidden' : 'visible';
+
+  // Next button label
+  const isLast = _obStep === total - 1;
+  document.getElementById('ob-next').textContent = isLast ? '✅ Começar!' : 'Próximo →';
+
+  // Render body
+  const body = document.getElementById('ob-body');
+  body.innerHTML = '';
+
+  switch(step.id){
+    case 'perfil':    body.innerHTML = obBodyPerfil();    break;
+    case 'renda':     body.innerHTML = obBodyRenda();     break;
+    case 'contas':    body.innerHTML = obBodyContas();    break;
+    case 'cartoes':   body.innerHTML = obBodyCartoes();   break;
+    case 'dividas':   body.innerHTML = obBodyDividas();   break;
+    case 'categorias':body.innerHTML = obBodyCategorias();break;
+    case 'limites':   body.innerHTML = obBodyLimites();   break;
+    case 'fim':       body.innerHTML = obBodyFim();       break;
+  }
+}
+
+/* ── Passo 1: Perfil ── */
+function obBodyPerfil(){
+  return `
+    <div class="ob-group">
+      <div class="ob-label">Seu nome</div>
+      <input class="ob-input" id="ob-nome" value="${_obData.perfil.nome}" placeholder="Ex: João Silva">
+    </div>
+    <div class="ob-group">
+      <div class="ob-label">Idade</div>
+      <input class="ob-input" id="ob-idade" type="number" min="18" max="100" value="${_obData.perfil.idade}" placeholder="Ex: 30" style="max-width:120px">
+    </div>
+    <div class="ob-group">
+      <div class="ob-label">Regime de trabalho</div>
+      <div class="ob-toggle-group">
+        <button class="ob-toggle ${_obData.perfil.tipo==='CLT'?'sel':''}" onclick="obSelectTipo('CLT')">👔 CLT</button>
+        <button class="ob-toggle ${_obData.perfil.tipo==='PJ'?'sel':''}" onclick="obSelectTipo('PJ')">🏢 PJ / Autônomo</button>
+        <button class="ob-toggle ${_obData.perfil.tipo==='outro'?'sel':''}" onclick="obSelectTipo('outro')">📦 Outro</button>
+      </div>
+    </div>`;
+}
+function obSelectTipo(t){
+  _obData.perfil.tipo=t;
+  document.querySelectorAll('.ob-toggle').forEach(b=>{
+    b.classList.toggle('sel', b.textContent.includes(t==='CLT'?'CLT':t==='PJ'?'PJ':'Outro'));
+  });
+}
+
+/* ── Passo 2: Renda ── */
+function obBodyRenda(){
+  const temAd = _obData.renda.temAdiantamento;
+  return `
+    <div class="ob-row">
+      <div class="ob-group" style="flex:2">
+        <div class="ob-label">Salário / pró-labore (R$)</div>
+        <input class="ob-input" id="ob-salario" type="number" min="0" step="100" value="${_obData.renda.salario}" placeholder="Ex: 5000">
+      </div>
+      <div class="ob-group" style="flex:1">
+        <div class="ob-label">Dia de recebimento</div>
+        <input class="ob-input" id="ob-dia-sal" type="number" min="1" max="31" value="${_obData.renda.diaSalario||5}" placeholder="5">
+      </div>
+    </div>
+    <div class="ob-group">
+      <div class="ob-label">Tem adiantamento?</div>
+      <div class="ob-toggle-group">
+        <button class="ob-toggle ${!temAd?'sel':''}" onclick="obToggleAdiant(false)">Não</button>
+        <button class="ob-toggle ${temAd?'sel':''}" onclick="obToggleAdiant(true)">Sim</button>
+      </div>
+    </div>
+    ${temAd?`
+    <div class="ob-row" id="ob-adiant-fields">
+      <div class="ob-group" style="flex:2">
+        <div class="ob-label">Valor do adiantamento (R$)</div>
+        <input class="ob-input" id="ob-adiant" type="number" min="0" step="100" value="${_obData.renda.adiantamento}" placeholder="Ex: 2000">
+      </div>
+      <div class="ob-group" style="flex:1">
+        <div class="ob-label">Dia de recebimento</div>
+        <input class="ob-input" id="ob-dia-adiant" type="number" min="1" max="31" value="${_obData.renda.diaAdiantamento||15}" placeholder="15">
+      </div>
+    </div>`:''}`;
+}
+function obToggleAdiant(val){
+  _obData.renda.temAdiantamento=val;
+  _obData.renda.salario=document.getElementById('ob-salario')?.value||'';
+  _obData.renda.diaSalario=document.getElementById('ob-dia-sal')?.value||'5';
+  document.getElementById('ob-body').innerHTML=obBodyRenda();
+}
+
+/* ── Passo 3: Contas ── */
+function obBodyContas(){
+  return `
+    ${_obData.contas.map((c,i)=>`
+      <div class="ob-item">
+        <span style="font-size:18px">${c.icon||'🏦'}</span>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:12px;font-weight:700;color:var(--text)">${c.nome}</div>
+          <div style="font-size:10px;color:var(--text3)">${c.banco} · ${c.tipo}</div>
+        </div>
+        <button class="ob-item-del" onclick="obDelConta(${i})">✕</button>
+      </div>`).join('')}
+    <button class="ob-card-add" onclick="obAddConta()">＋ Adicionar conta bancária</button>
+    <div style="font-size:11px;color:var(--text3)">Exemplos: Bradesco Corrente, Nubank, C6...</div>`;
+}
+function obAddConta(){
+  const nome=prompt('Nome da conta (ex: Nubank, Bradesco Corrente):'); if(!nome)return;
+  const banco=prompt('Banco (ex: Nubank, Bradesco, Itaú):'); if(!banco)return;
+  const tipos=['Corrente','Poupança','Digital','Investimento'];
+  const tipo=tipos[parseInt(prompt('Tipo:\n0-Corrente\n1-Poupança\n2-Digital\n3-Investimento','0'))||0]||'Corrente';
+  _obData.contas.push({id:'c'+Date.now(),nome,banco,tipo,icon:'🏦',color:'#185FA5',conta_num:'',agencia:''});
+  document.getElementById('ob-body').innerHTML=obBodyContas();
+}
+function obDelConta(i){_obData.contas.splice(i,1);document.getElementById('ob-body').innerHTML=obBodyContas();}
+
+/* ── Passo 4: Cartões ── */
+function obBodyCartoes(){
+  return `
+    ${_obData.cartoes.map((c,i)=>`
+      <div class="ob-item">
+        <span style="font-size:18px">${c.icon||'💳'}</span>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:12px;font-weight:700;color:var(--text)">${c.name}</div>
+          <div style="font-size:10px;color:var(--text3)">Crédito · Fatura dia ${c.diaFatura}</div>
+        </div>
+        <button class="ob-item-del" onclick="obDelCartao(${i})">✕</button>
+      </div>`).join('')}
+    <button class="ob-card-add" onclick="obAddCartao()">＋ Adicionar cartão de crédito</button>
+    <div style="font-size:11px;color:var(--text3)">Informe o dia em que a fatura fecha (vence).</div>`;
+}
+function obAddCartao(){
+  const name=prompt('Nome do cartão (ex: Nubank, Itaú Visa):'); if(!name)return;
+  const diaFatura=parseInt(prompt('Dia de vencimento da fatura (1-28):','10'))||10;
+  const icons=['💳','💜','🟡','⬛','🔵'];
+  _obData.cartoes.push({id:'cc'+Date.now(),name,type:'Crédito',icon:'💳',diaFatura});
+  document.getElementById('ob-body').innerHTML=obBodyCartoes();
+}
+function obDelCartao(i){_obData.cartoes.splice(i,1);document.getElementById('ob-body').innerHTML=obBodyCartoes();}
+
+/* ── Passo 5: Dívidas ── */
+function obBodyDividas(){
+  return `
+    ${_obData.dividas.map((d,i)=>`
+      <div class="ob-item" style="flex-direction:column;align-items:flex-start;gap:4px">
+        <div style="display:flex;align-items:center;width:100%">
+          <div style="flex:1">
+            <div style="font-size:12px;font-weight:700;color:var(--text)">${d.descricao}</div>
+            <div style="font-size:10px;color:var(--text3)">${fmt(d.valorParcela)}/mês · Parcela ${d.parcelaAtual}/${d.totalParcelas} · ${d.pagamento||'—'}</div>
+          </div>
+          <button class="ob-item-del" onclick="obDelDivida(${i})">✕</button>
+        </div>
+      </div>`).join('')}
+    <button class="ob-card-add" onclick="obAddDivida()">＋ Adicionar dívida / parcelamento</button>
+    <div style="font-size:11px;color:var(--text3)">Ex: financiamento, cartão parcelado, empréstimo...</div>`;
+}
+function obAddDivida(){
+  const descricao=prompt('Descrição (ex: Financiamento carro, iPhone 15):'); if(!descricao)return;
+  const valorParcela=parseFloat(prompt('Valor da parcela (R$):'));
+  if(!valorParcela||valorParcela<=0){alert('Valor inválido');return;}
+  const parcelaAtual=parseInt(prompt('Qual parcela você está agora? (ex: 3):','1'))||1;
+  const totalParcelas=parseInt(prompt('Total de parcelas (ex: 12):','12'))||12;
+  const pagamento=prompt('Cartão/método de pagamento (opcional):','')||'';
+  // Calcular data início retroativamente
+  const hoje=new Date();
+  const inicio=new Date(hoje.getFullYear(),hoje.getMonth()-(parcelaAtual-1),1);
+  const startDate=inicio.toISOString().split('T')[0];
+  _obData.dividas.push({id:'dv'+Date.now(),descricao,valorParcela,parcelaAtual,totalParcelas,pagamento,startDate,categoria:'emprestimo'});
+  document.getElementById('ob-body').innerHTML=obBodyDividas();
+}
+function obDelDivida(i){_obData.dividas.splice(i,1);document.getElementById('ob-body').innerHTML=obBodyDividas();}
+
+/* ── Passo 6: Categorias ── */
+function obBodyCategorias(){
+  return `
+    <div class="ob-cat-grid">
+      ${OB_CATS_OPCOES.map(c=>{
+        const sel=_obData.categorias.includes(c.id);
+        return`<div class="ob-cat-card ${sel?'sel':''}" onclick="obToggleCat('${c.id}')">
+          <div class="ob-check">${sel?'✓':''}</div>
+          <span style="font-size:16px">${c.icon}</span>
+          <span style="font-size:12px;font-weight:600;color:var(--text)">${c.name}</span>
+        </div>`;
+      }).join('')}
+    </div>
+    <div style="font-size:11px;color:var(--text3);text-align:center">Selecione as categorias que quer acompanhar. Pode ajustar depois.</div>`;
+}
+function obToggleCat(id){
+  const idx=_obData.categorias.indexOf(id);
+  if(idx>=0) _obData.categorias.splice(idx,1);
+  else _obData.categorias.push(id);
+  document.getElementById('ob-body').innerHTML=obBodyCategorias();
+}
+
+/* ── Passo 7: Limites ── */
+function obBodyLimites(){
+  const cats=OB_CATS_OPCOES.filter(c=>_obData.categorias.includes(c.id));
+  return `
+    <div style="font-size:11px;color:var(--text2);margin-bottom:4px">Defina o limite mensal para cada categoria. Pode ser ajustado depois.</div>
+    ${cats.map(c=>`
+      <div class="ob-limit-row">
+        <span style="font-size:16px;width:24px;text-align:center">${c.icon}</span>
+        <span style="flex:1;font-size:13px;font-weight:600;color:var(--text)">${c.name}</span>
+        <div style="display:flex;align-items:center;gap:6px">
+          <span style="font-size:11px;color:var(--text3)">R$</span>
+          <input class="ob-input" id="ob-lim-${c.id}" type="number" min="0" step="50"
+            value="${_obData.limites[c.id]||''}" placeholder="0"
+            style="width:110px;text-align:right;font-family:var(--font-mono)">
+        </div>
+      </div>`).join('')}`;
+}
+
+/* ── Passo Final: Resumo ── */
+function obBodyFim(){
+  const cats=OB_CATS_OPCOES.filter(c=>_obData.categorias.includes(c.id));
+  return `
+    <div style="background:var(--green-bg);border:1px solid var(--green-border);border-radius:var(--r);padding:12px 16px;display:flex;gap:10px;align-items:center;margin-bottom:4px">
+      <span style="font-size:24px">🎉</span>
+      <div>
+        <div style="font-size:13px;font-weight:700;color:var(--green)">Configuração concluída!</div>
+        <div style="font-size:11px;color:var(--text2);margin-top:2px">Tudo pronto para começar. Veja o resumo abaixo.</div>
+      </div>
+    </div>
+    ${_obData.renda.salario?`
+    <div style="background:var(--bg2);border-radius:var(--r);padding:12px 14px">
+      <div style="font-size:9px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px">💼 Renda configurada</div>
+      <div class="ob-summary-item"><span style="font-size:12px;color:var(--text)">Salário</span><span style="font-size:12px;font-weight:700;color:var(--green);font-family:var(--font-mono)">${fmt(parseFloat(_obData.renda.salario))}</span></div>
+      ${_obData.renda.temAdiantamento&&_obData.renda.adiantamento?`<div class="ob-summary-item"><span style="font-size:12px;color:var(--text)">Adiantamento</span><span style="font-size:12px;font-weight:700;color:var(--green);font-family:var(--font-mono)">${fmt(parseFloat(_obData.renda.adiantamento))}</span></div>`:''}
+    </div>`:''}
+    ${_obData.contas.length?`
+    <div style="background:var(--bg2);border-radius:var(--r);padding:12px 14px">
+      <div style="font-size:9px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px">🏦 ${_obData.contas.length} conta(s) bancária(s)</div>
+      ${_obData.contas.map(c=>`<div class="ob-summary-item"><span style="font-size:12px;color:var(--text)">${c.icon} ${c.nome}</span><span style="font-size:11px;color:var(--text3)">${c.banco}</span></div>`).join('')}
+    </div>`:''}
+    ${_obData.cartoes.length?`
+    <div style="background:var(--bg2);border-radius:var(--r);padding:12px 14px">
+      <div style="font-size:9px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px">💳 ${_obData.cartoes.length} cartão(ões)</div>
+      ${_obData.cartoes.map(c=>`<div class="ob-summary-item"><span style="font-size:12px;color:var(--text)">${c.icon} ${c.name}</span><span style="font-size:11px;color:var(--text3)">Fatura dia ${c.diaFatura}</span></div>`).join('')}
+    </div>`:''}
+    ${_obData.dividas.length?`
+    <div style="background:var(--bg2);border-radius:var(--r);padding:12px 14px">
+      <div style="font-size:9px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px">📋 ${_obData.dividas.length} dívida(s)</div>
+      ${_obData.dividas.map(d=>`<div class="ob-summary-item"><span style="font-size:12px;color:var(--text)">${d.descricao}</span><span style="font-size:11px;color:var(--red);font-family:var(--font-mono)">${fmt(d.valorParcela)}/mês</span></div>`).join('')}
+    </div>`:''}
+    <div style="background:var(--bg2);border-radius:var(--r);padding:12px 14px">
+      <div style="font-size:9px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px">📊 ${cats.length} categoria(s) ativa(s)</div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        ${cats.map(c=>`<span style="padding:3px 10px;background:var(--gold-bg);border:1px solid var(--gold-border);border-radius:20px;font-size:11px;color:var(--gold-3)">${c.icon} ${c.name}</span>`).join('')}
+      </div>
+    </div>`;
+}
+
+/* ── Aplicar tudo no app ── */
+function obApplyAll(){
+  if(!currentUser) return;
+
+  // 1. Receitas recorrentes
+  if(_obData.renda.salario){
+    const salVal=parseFloat(_obData.renda.salario);
+    const diaSal=parseInt(_obData.renda.diaSalario)||5;
+    const hoje=new Date().toISOString().split('T')[0];
+    // Remove receitas geradas por onboarding anterior
+    state.receitas=state.receitas.filter(r=>!r._obId);
+    state.receitas.push({
+      id:'r_ob_sal',_obId:true,
+      descricao:_obData.perfil.tipo==='PJ'?'Pró-labore':'Salário',
+      categoria:'salario',valor:salVal,
+      pagamento:'',date:hoje,
+      recorrente:true,diaRecebimento:diaSal
+    });
+    if(_obData.renda.temAdiantamento&&_obData.renda.adiantamento){
+      const adVal=parseFloat(_obData.renda.adiantamento);
+      const diaAd=parseInt(_obData.renda.diaAdiantamento)||15;
+      if(adVal>0){
+        state.receitas.push({
+          id:'r_ob_adiant',_obId:true,
+          descricao:'Adiantamento',
+          categoria:'salario',valor:adVal,
+          pagamento:'',date:hoje,
+          recorrente:true,diaRecebimento:diaAd
+        });
+      }
+    }
+  }
+
+  // 2. Contas bancárias
+  if(_obData.contas.length){
+    const contasExist=getContas();
+    _obData.contas.forEach(c=>{
+      if(!contasExist.find(e=>e.id===c.id)) contasExist.push(c);
+    });
+    saveContas(contasExist);
+  }
+
+  // 3. Cartões de crédito
+  if(_obData.cartoes.length){
+    _obData.cartoes.forEach(c=>{
+      if(!pays.find(p=>p.id===c.id)) pays.push(c);
+    });
+    sv(uKey('pays'),pays);
+  }
+  // Add basic à-vista methods if empty
+  if(!pays.find(p=>p.type==='Pix')){
+    pays.push({id:'p_pix',name:'Pix',type:'Pix',icon:'⚡',diaFatura:null});
+    pays.push({id:'p_din',name:'Dinheiro',type:'Dinheiro',icon:'💵',diaFatura:null});
+    sv(uKey('pays'),pays);
+  }
+
+  // 4. Dívidas/parcelamentos
+  if(_obData.dividas.length){
+    state.despesasFixas=state.despesasFixas.filter(d=>!d._obId);
+    _obData.dividas.forEach(d=>{
+      state.despesasFixas.push({
+        id:d.id,_obId:true,
+        descricao:d.descricao,
+        categoria:d.categoria||'emprestimo',
+        valorParcela:d.valorParcela,
+        pagamento:d.pagamento||'',
+        diaVencimento:1,
+        totalParcelas:d.totalParcelas,
+        startDate:d.startDate,
+        observacao:'Adicionado no onboarding'
+      });
+    });
+  }
+
+  // 5. Categorias + limites
+  const catsSel=OB_CATS_OPCOES.filter(c=>_obData.categorias.includes(c.id));
+  if(catsSel.length){
+    // Start from DEF_CATS but only keep selected categories
+    // For each selected cat, apply the limit defined in onboarding
+    const catsBase = DEF_CATS.map(dc => ({...dc, subcategories: dc.subcategories.map(s=>({...s}))}));
+    const catsResult = [];
+    catsSel.forEach(oc=>{
+      const limTotal = _obData.limites[oc.id] || 0;
+      const numSubs = oc.subs.length || 1;
+      // Distribute limit evenly across subcategories
+      const limPerSub = Math.round(limTotal / numSubs);
+      // Find existing base cat to preserve subcategory names
+      const base = catsBase.find(c=>c.id===oc.id);
+      if(base){
+        base.subcategories.forEach(s=>{ s.limit = limPerSub; s.spent = 0; });
+        catsResult.push(base);
+      } else {
+        catsResult.push({
+          id:oc.id, name:oc.name, icon:oc.icon, color:oc.color,
+          subcategories: oc.subs.map(s=>({id:s.id,name:s.name,limit:limPerSub,spent:0}))
+        });
+      }
+    });
+    // Save cats and update state immediately
+    sv(uKey('cats'), catsResult);
+    state.cats = catsResult; // update in-memory state too
+  }
+
+  saveState(state);
+  state=loadState(); pays=ld(uKey('pays'),DEF_PAYS);
+  // Also push to Firebase
+  fbSaveBase(uid(),{
+    cats:state.cats.map(c=>({...c,subcategories:c.subcategories.map(s=>({id:s.id,name:s.name,limit:s.limit}))})),
+    pays, receitas:state.receitas, despesasFixas:state.despesasFixas,
+    fcFlags:state.fcFlags, contas:getContas()
+  }).catch(console.error);
+}
+
+
+/* ══════════════════════════════════════════════════════
+   PROJETOS — Simulador de cenários no P&L
+   ══════════════════════════════════════════════════════ */
+
+const PROJ_TIPOS = {
+  viagem:   { icon:'✈️', label:'Viagem' },
+  imovel:   { icon:'🏠', label:'Compra de Imóvel' },
+  veiculo:  { icon:'🚗', label:'Financiamento de Veículo' },
+  bem:      { icon:'📱', label:'Bem Durável' }
+};
+
+let _selectedProj = null;
+
+function getProjetos(){ return ld(uKey('projetos'), []); }
+function saveProjetos(projs){
+  sv(uKey('projetos'), projs);
+  fbSaveBase(uid(), {
+    cats: state.cats.map(c=>({...c, subcategories: c.subcategories.map(s=>({id:s.id,name:s.name,limit:s.limit}))})),
+    pays, receitas: state.receitas, despesasFixas: state.despesasFixas,
+    fcFlags: state.fcFlags, contas: getContas(), projetos: projs
+  }).catch(console.error);
+}
+
+// Gera o fluxo de pagamentos mês a mês para um projeto
+function _gerarFluxoProj(p) {
+  // Returns: [{yr, mo, valor, label, tipo}]  tipo: 'parcelado'|'avista'
+  const fluxo = [];
+  if(!p) return fluxo;
+
+  if(p.tipo === 'viagem') {
+    // Parcelamentos pré-viagem
+    const parcelas = [
+      { descricao:'Passagem aérea', valor: parseFloat(p.passagem||0), parcelas: parseInt(p.passagemParc||1), dataInicio: p.passagemInicio },
+      { descricao:'Hospedagem',     valor: parseFloat(p.hotel||0),    parcelas: parseInt(p.hotelParc||1),    dataInicio: p.hotelInicio }
+    ];
+    parcelas.forEach(item => {
+      if(!item.valor || !item.dataInicio) return;
+      const valorParc = Math.round(item.valor / item.parcelas * 100) / 100;
+      const inicio = new Date(item.dataInicio + 'T12:00:00');
+      for(let k = 0; k < item.parcelas; k++) {
+        const d = new Date(inicio.getFullYear(), inicio.getMonth() + k, 1);
+        fluxo.push({ yr: d.getFullYear(), mo: d.getMonth(), valor: valorParc, label: `${item.descricao} (${k+1}/${item.parcelas})`, tipo:'parcelado' });
+      }
+    });
+    // Gastos no local (mês da viagem)
+    if(p.dataViagem) {
+      const dv = new Date(p.dataViagem + 'T12:00:00');
+      const dias = parseInt(p.dias || 1);
+      const pessoas = parseInt(p.pessoas || 1);
+      const cambio = parseFloat(p.cambio || 1);
+      const alim = parseFloat(p.alimentacaoDia || 0) * dias * pessoas * cambio;
+      const transp = parseFloat(p.transporteDia || 0) * dias * pessoas * cambio;
+      const outros = parseFloat(p.outrosLocal || 0);
+      const totalLocal = Math.round((alim + transp + outros) * 100) / 100;
+      if(totalLocal > 0) {
+        fluxo.push({ yr: dv.getFullYear(), mo: dv.getMonth(), valor: totalLocal, label: `Gastos locais em ${p.destino||'destino'} (${dias}d × ${pessoas}p)`, tipo:'avista' });
+      }
+    }
+  }
+
+  if(p.tipo === 'imovel') {
+    if(!p.dataCompra) return fluxo;
+    const dc = new Date(p.dataCompra + 'T12:00:00');
+    const entrada = parseFloat(p.entrada || 0);
+    const itbi = parseFloat(p.itbi || 0);
+    const escrit = parseFloat(p.escritura || 0);
+    const reforma = parseFloat(p.reforma || 0);
+    const reformaParc = parseInt(p.reformaParcelas || 1);
+    // Entrada + ITBI + escritura no mês da compra
+    if(entrada > 0) fluxo.push({ yr: dc.getFullYear(), mo: dc.getMonth(), valor: entrada, label: 'Entrada imóvel', tipo:'avista' });
+    if(itbi > 0)    fluxo.push({ yr: dc.getFullYear(), mo: dc.getMonth(), valor: itbi, label: 'ITBI', tipo:'avista' });
+    if(escrit > 0)  fluxo.push({ yr: dc.getFullYear(), mo: dc.getMonth(), valor: escrit, label: 'Escritura/cartório', tipo:'avista' });
+    // Reforma parcelada
+    if(reforma > 0) {
+      const rParc = Math.round(reforma / reformaParc * 100) / 100;
+      for(let k = 0; k < reformaParc; k++) {
+        const d = new Date(dc.getFullYear(), dc.getMonth() + k, 1);
+        fluxo.push({ yr: d.getFullYear(), mo: d.getMonth(), valor: rParc, label: `Reforma (${k+1}/${reformaParc})`, tipo:'parcelado' });
+      }
+    }
+    // Financiamento (parcelas mensais)
+    const valorFinanciado = parseFloat(p.valorFinanciado || 0);
+    const taxa = parseFloat(p.taxa || 0) / 100;
+    const nParc = parseInt(p.parcelas || 0);
+    const sis = p.sistema || 'price';
+    if(valorFinanciado > 0 && taxa > 0 && nParc > 0) {
+      for(let k = 0; k < nParc; k++) {
+        const d = new Date(dc.getFullYear(), dc.getMonth() + 1 + k, 1);
+        let parcVal;
+        if(sis === 'sac') {
+          const amort = valorFinanciado / nParc;
+          const saldoK = valorFinanciado - amort * k;
+          parcVal = Math.round((amort + saldoK * taxa) * 100) / 100;
+        } else {
+          parcVal = Math.round(valorFinanciado * taxa / (1 - Math.pow(1 + taxa, -nParc)) * 100) / 100;
+        }
+        fluxo.push({ yr: d.getFullYear(), mo: d.getMonth(), valor: parcVal, label: `Parcela imóvel ${k+1}/${nParc}`, tipo:'parcelado' });
+      }
+    }
+  }
+
+  if(p.tipo === 'veiculo') {
+    if(!p.dataInicio) return fluxo;
+    const di = new Date(p.dataInicio + 'T12:00:00');
+    const entrada = parseFloat(p.entrada || 0);
+    const valorFinanciado = parseFloat(p.valorFinanciado || 0);
+    const taxa = parseFloat(p.taxa || 0) / 100;
+    const nParc = parseInt(p.parcelas || 0);
+    const sis = p.sistema || 'price';
+    if(entrada > 0) fluxo.push({ yr: di.getFullYear(), mo: di.getMonth(), valor: entrada, label: 'Entrada veículo', tipo:'avista' });
+    if(valorFinanciado > 0 && taxa > 0 && nParc > 0) {
+      for(let k = 0; k < nParc; k++) {
+        const d = new Date(di.getFullYear(), di.getMonth() + k, 1);
+        let parcVal;
+        if(sis === 'sac') {
+          const amort = valorFinanciado / nParc;
+          const saldoK = valorFinanciado - amort * k;
+          parcVal = Math.round((amort + saldoK * taxa) * 100) / 100;
+        } else {
+          parcVal = Math.round(valorFinanciado * taxa / (1 - Math.pow(1 + taxa, -nParc)) * 100) / 100;
+        }
+        fluxo.push({ yr: d.getFullYear(), mo: d.getMonth(), valor: parcVal, label: `Parcela veículo ${k+1}/${nParc}`, tipo:'parcelado' });
+      }
+    }
+    // Seguro anual
+    const seguro = parseFloat(p.seguro || 0);
+    if(seguro > 0) fluxo.push({ yr: di.getFullYear(), mo: di.getMonth(), valor: seguro, label: 'Seguro anual', tipo:'avista' });
+  }
+
+  if(p.tipo === 'bem') {
+    if(!p.dataInicio) return fluxo;
+    const di = new Date(p.dataInicio + 'T12:00:00');
+    const valor = parseFloat(p.valor || 0);
+    const nParc = parseInt(p.parcelas || 1);
+    if(valor > 0) {
+      const parcVal = Math.round(valor / nParc * 100) / 100;
+      for(let k = 0; k < nParc; k++) {
+        const d = new Date(di.getFullYear(), di.getMonth() + k, 1);
+        fluxo.push({ yr: d.getFullYear(), mo: d.getMonth(), valor: parcVal, label: `${p.nome||'Bem'} (${k+1}/${nParc})`, tipo:'parcelado' });
+      }
+    }
+  }
+
+  return fluxo;
+}
+
+// Retorna o custo de projetos ATIVOS num mês específico
+function _getProjCustoMes(y, m) {
+  const projs = getProjetos().filter(p => p.ativo);
+  let total = 0;
+  projs.forEach(p => {
+    _gerarFluxoProj(p).forEach(f => { if(f.yr === y && f.mo === m) total += f.valor; });
+  });
+  return Math.round(total * 100) / 100;
+}
+
+function renderProj() {
+  const projs = getProjetos();
+  const list = document.getElementById('proj-list');
+  if(!projs.length) {
+    list.innerHTML = '<div class="empty">Nenhum projeto.<br>Clique em + Novo para criar.</div>';
+    document.getElementById('proj-detail').innerHTML = '<div class="empty">Crie um projeto para simular o impacto no P&L.</div>';
+    return;
+  }
+  list.innerHTML = projs.map(p => {
+    const fluxo = _gerarFluxoProj(p);
+    const total = fluxo.reduce((a, f) => a + f.valor, 0);
+    const sel = _selectedProj === p.id;
+    const tipo = PROJ_TIPOS[p.tipo] || { icon:'📦', label:'Projeto' };
+    return `<div class="proj-card ${sel?'sel':''}" onclick="selectProj('${p.id}')">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+        <span style="font-size:18px">${tipo.icon}</span>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:12px;font-weight:700;color:var(--text)">${p.nome}</div>
+          <div style="font-size:10px;color:var(--text3)">${tipo.label}</div>
+        </div>
+        <button class="proj-toggle ${p.ativo?'on':'off'}" onclick="event.stopPropagation();toggleProj('${p.id}')">
+          ${p.ativo?'✅ No P&L':'⏸ Pausado'}
+        </button>
+      </div>
+      <div style="font-size:11px;color:var(--text2)">Total: <strong style="color:var(--red);font-family:var(--font-mono)">${fmt(total)}</strong> · ${fluxo.length} lançamento(s)</div>
+    </div>`;
+  }).join('');
+  if(!_selectedProj && projs.length) _selectedProj = projs[0].id;
+  _renderProjDetail();
+}
+
+function selectProj(id) { _selectedProj = id; renderProj(); }
+
+function toggleProj(id) {
+  const projs = getProjetos();
+  const p = projs.find(x => x.id === id);
+  if(p) { p.ativo = !p.ativo; saveProjetos(projs); renderProj(); }
+}
+
+function _renderProjDetail() {
+  const projs = getProjetos();
+  const p = projs.find(x => x.id === _selectedProj);
+  const div = document.getElementById('proj-detail');
+  if(!p) { div.innerHTML = '<div class="empty">Selecione um projeto.</div>'; return; }
+
+  const fluxo = _gerarFluxoProj(p);
+  const tipo = PROJ_TIPOS[p.tipo] || { icon:'📦', label:'Projeto' };
+  const total = fluxo.reduce((a, f) => a + f.valor, 0);
+
+  // Group fluxo by year-month
+  const porMes = {};
+  fluxo.forEach(f => {
+    const k = `${f.yr}-${String(f.mo).padStart(2,'0')}`;
+    if(!porMes[k]) porMes[k] = { yr: f.yr, mo: f.mo, items: [], total: 0 };
+    porMes[k].items.push(f);
+    porMes[k].total = Math.round((porMes[k].total + f.valor) * 100) / 100;
+  });
+
+  div.innerHTML = `
+    <!-- Header -->
+    <div style="padding:14px 16px;border-bottom:1px solid var(--border);background:var(--bg2);display:flex;align-items:center;gap:12px">
+      <span style="font-size:28px">${tipo.icon}</span>
+      <div style="flex:1">
+        <div style="font-size:15px;font-weight:800;color:var(--text)">${p.nome}</div>
+        <div style="font-size:11px;color:var(--text3)">${tipo.label} · Total: <strong style="color:var(--red);font-family:var(--font-mono)">${fmt(total)}</strong></div>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <button class="proj-toggle ${p.ativo?'on':'off'}" onclick="toggleProj('${p.id}')">
+          ${p.ativo?'✅ Ativo no P&L':'⏸ Pausado'}
+        </button>
+        <button onclick="openProjModal('${p.id}')" style="padding:5px 12px;border:1px solid var(--border2);background:transparent;border-radius:var(--r);font-size:11px;color:var(--text2);cursor:pointer;font-family:var(--font)">✏️ Editar</button>
+        <button onclick="deleteProj('${p.id}')" style="padding:5px 12px;border:1px solid rgba(220,38,38,0.3);background:transparent;border-radius:var(--r);font-size:11px;color:var(--red);cursor:pointer;font-family:var(--font)">🗑</button>
+      </div>
+    </div>
+
+    <!-- Status badge -->
+    ${p.ativo ? `<div style="margin:12px 16px 0;padding:10px 14px;background:var(--green-bg);border:1px solid var(--green-border);border-radius:var(--r);font-size:11px;color:var(--green);font-weight:600">
+      ✅ Este projeto está <strong>ativo no P&L</strong> — o impacto já está refletido na aba Projeção Anual.
+    </div>` : `<div style="margin:12px 16px 0;padding:10px 14px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);font-size:11px;color:var(--text3)">
+      ⏸ Projeto pausado. Ative para ver o impacto no P&L.
+    </div>`}
+
+    <!-- Fluxo mês a mês -->
+    <div style="padding:14px 16px">
+      <div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px">📅 Fluxo de pagamentos</div>
+      ${Object.values(porMes).sort((a,b)=>a.yr!==b.yr?a.yr-b.yr:a.mo-b.mo).map(mes=>`
+        <div style="margin-bottom:10px;border:1px solid var(--border);border-radius:var(--r);overflow:hidden">
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:var(--bg2);border-bottom:1px solid var(--border)">
+            <span style="font-size:11px;font-weight:700;color:var(--text)">${MONTHS[mes.mo].charAt(0).toUpperCase()+MONTHS[mes.mo].slice(1)} ${mes.yr}</span>
+            <span style="font-size:12px;font-weight:800;color:var(--red);font-family:var(--font-mono)">${fmt(mes.total)}</span>
+          </div>
+          ${mes.items.map(f=>`
+            <div class="proj-flow-row" style="padding:7px 12px">
+              <span style="font-size:11px;color:var(--text2);flex:1">${f.label}</span>
+              <span style="font-size:10px;padding:2px 7px;border-radius:20px;background:${f.tipo==='parcelado'?'var(--amber-bg)':'var(--red-bg)'};color:${f.tipo==='parcelado'?'var(--amber)':'var(--red)'};font-weight:600">${f.tipo==='parcelado'?'Parcelado':'À vista'}</span>
+              <span style="font-size:12px;font-weight:700;color:var(--text);font-family:var(--font-mono);min-width:80px;text-align:right">${fmt(f.valor)}</span>
+            </div>`).join('')}
+        </div>`).join('')}
+      ${!fluxo.length ? '<div class="empty">Preencha os dados do projeto para ver o fluxo.</div>' : ''}
+    </div>`;
+}
+
+function deleteProj(id) {
+  if(!confirm('Excluir este projeto?')) return;
+  const projs = getProjetos().filter(p => p.id !== id);
+  if(_selectedProj === id) _selectedProj = projs[0]?.id || null;
+  saveProjetos(projs);
+  renderProj();
+}
+
+/* ── Modal de criação/edição ── */
+function openProjModal(editId) {
+  const projs = getProjetos();
+  const p = editId ? projs.find(x => x.id === editId) : null;
+  const tipo = p?.tipo || 'viagem';
+
+  document.getElementById('modal-area').innerHTML = `<div class="overlay" onclick="closeModal()"><div class="modal" onclick="event.stopPropagation()" style="max-width:500px">
+    <h3>${p ? 'Editar projeto' : 'Novo projeto'}</h3>
+    <div class="mf"><label>Nome do projeto</label><input id="pj-nome" value="${p?.nome||''}" placeholder="Ex: Viagem NYC 2025, Compra do Apê..."></div>
+    <div class="mf"><label>Tipo</label>
+      <select id="pj-tipo" onchange="renderProjFields()" style="font-size:13px">
+        ${Object.entries(PROJ_TIPOS).map(([k,v])=>`<option value="${k}" ${tipo===k?'selected':''}>${v.icon} ${v.label}</option>`).join('')}
+      </select>
+    </div>
+    <div id="pj-fields"></div>
+    <div class="mbtns">
+      ${p ? `<button class="md" onclick="deleteProj('${p.id}');closeModal()">Excluir</button>` : ''}
+      <button class="mc" onclick="closeModal()">Cancelar</button>
+      <button class="ms" onclick="saveProj(${p?`'${p.id}'`:'null'})">Salvar</button>
+    </div>
+  </div></div>`;
+  renderProjFields(p);
+}
+
+function renderProjFields(p) {
+  const tipo = document.getElementById('pj-tipo')?.value || 'viagem';
+  const div = document.getElementById('pj-fields');
+  if(!div) return;
+  const v = (id, def='') => p?.[id] ?? def;
+
+  if(tipo === 'viagem') {
+    div.innerHTML = `
+      <div class="mf"><label>Destino</label><input id="pj-destino" value="${v('destino')}" placeholder="Ex: Nova York, Paris..."></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <div class="mf"><label>Data da viagem</label><input id="pj-dataViagem" type="date" value="${v('dataViagem')}"></div>
+        <div class="mf"><label>Duração (dias)</label><input id="pj-dias" type="number" min="1" value="${v('dias','7')}" placeholder="7"></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <div class="mf"><label>Nº de pessoas</label><input id="pj-pessoas" type="number" min="1" value="${v('pessoas','1')}"></div>
+        <div class="mf"><label>Taxa de câmbio (R$/moeda)</label><input id="pj-cambio" type="number" step="0.01" value="${v('cambio','1')}" placeholder="Ex: 5.80 para USD"></div>
+      </div>
+      <div style="background:var(--bg2);border-radius:var(--r);padding:12px;border:1px solid var(--border);margin-bottom:4px">
+        <div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">✈️ Passagem aérea</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
+          <div class="mf"><label>Valor total (R$)</label><input id="pj-passagem" type="number" value="${v('passagem','0')}"></div>
+          <div class="mf"><label>Parcelas</label><input id="pj-passagemParc" type="number" min="1" value="${v('passagemParc','1')}"></div>
+          <div class="mf"><label>Início pagamento</label><input id="pj-passagemInicio" type="date" value="${v('passagemInicio')}"></div>
+        </div>
+      </div>
+      <div style="background:var(--bg2);border-radius:var(--r);padding:12px;border:1px solid var(--border);margin-bottom:4px">
+        <div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">🏨 Hospedagem</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
+          <div class="mf"><label>Valor total (R$)</label><input id="pj-hotel" type="number" value="${v('hotel','0')}"></div>
+          <div class="mf"><label>Parcelas</label><input id="pj-hotelParc" type="number" min="1" value="${v('hotelParc','1')}"></div>
+          <div class="mf"><label>Início pagamento</label><input id="pj-hotelInicio" type="date" value="${v('hotelInicio')}"></div>
+        </div>
+      </div>
+      <div style="background:var(--bg2);border-radius:var(--r);padding:12px;border:1px solid var(--border)">
+        <div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">🍽 Gastos no local (em moeda local/dia)</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
+          <div class="mf"><label>Alimentação/pessoa/dia</label><input id="pj-alimentacaoDia" type="number" value="${v('alimentacaoDia','0')}"></div>
+          <div class="mf"><label>Transporte/pessoa/dia</label><input id="pj-transporteDia" type="number" value="${v('transporteDia','0')}"></div>
+          <div class="mf"><label>Outros (total)</label><input id="pj-outrosLocal" type="number" value="${v('outrosLocal','0')}"></div>
+        </div>
+      </div>`;
+  }
+
+  if(tipo === 'imovel') {
+    div.innerHTML = `
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <div class="mf"><label>Valor do imóvel (R$)</label><input id="pj-valorImovel" type="number" value="${v('valorImovel','0')}"></div>
+        <div class="mf"><label>Data da compra</label><input id="pj-dataCompra" type="date" value="${v('dataCompra')}"></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <div class="mf"><label>Entrada (R$)</label><input id="pj-entrada" type="number" value="${v('entrada','0')}"></div>
+        <div class="mf"><label>Valor financiado (R$)</label><input id="pj-valorFinanciado" type="number" value="${v('valorFinanciado','0')}"></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
+        <div class="mf"><label>Taxa mensal (%)</label><input id="pj-taxa" type="number" step="0.01" value="${v('taxa','0.7')}"></div>
+        <div class="mf"><label>Parcelas</label><input id="pj-parcelas" type="number" value="${v('parcelas','360')}"></div>
+        <div class="mf"><label>Sistema</label>
+          <select id="pj-sistema">
+            <option value="price" ${v('sistema','price')==='price'?'selected':''}>Price</option>
+            <option value="sac" ${v('sistema')==='sac'?'selected':''}>SAC</option>
+          </select>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
+        <div class="mf"><label>ITBI (R$)</label><input id="pj-itbi" type="number" value="${v('itbi','0')}"></div>
+        <div class="mf"><label>Escritura (R$)</label><input id="pj-escritura" type="number" value="${v('escritura','0')}"></div>
+        <div class="mf"><label>Reforma (R$)</label><input id="pj-reforma" type="number" value="${v('reforma','0')}"></div>
+      </div>
+      <div class="mf"><label>Parcelas da reforma</label><input id="pj-reformaParcelas" type="number" min="1" value="${v('reformaParcelas','1')}"></div>`;
+  }
+
+  if(tipo === 'veiculo') {
+    div.innerHTML = `
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <div class="mf"><label>Valor do veículo (R$)</label><input id="pj-valorVeiculo" type="number" value="${v('valorVeiculo','0')}"></div>
+        <div class="mf"><label>Data de início</label><input id="pj-dataInicio" type="date" value="${v('dataInicio')}"></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <div class="mf"><label>Entrada (R$)</label><input id="pj-entrada" type="number" value="${v('entrada','0')}"></div>
+        <div class="mf"><label>Valor financiado (R$)</label><input id="pj-valorFinanciado" type="number" value="${v('valorFinanciado','0')}"></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
+        <div class="mf"><label>Taxa mensal (%)</label><input id="pj-taxa" type="number" step="0.01" value="${v('taxa','1.5')}"></div>
+        <div class="mf"><label>Parcelas</label><input id="pj-parcelas" type="number" value="${v('parcelas','48')}"></div>
+        <div class="mf"><label>Sistema</label>
+          <select id="pj-sistema">
+            <option value="price" ${v('sistema','price')==='price'?'selected':''}>Price</option>
+            <option value="sac" ${v('sistema')==='sac'?'selected':''}>SAC</option>
+          </select>
+        </div>
+      </div>
+      <div class="mf"><label>Seguro anual estimado (R$)</label><input id="pj-seguro" type="number" value="${v('seguro','0')}"></div>`;
+  }
+
+  if(tipo === 'bem') {
+    div.innerHTML = `
+      <div class="mf"><label>Descrição do bem</label><input id="pj-nomeBem" value="${v('nome','')}" placeholder="Ex: iPhone 15 Pro, Notebook Dell..."></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
+        <div class="mf"><label>Valor total (R$)</label><input id="pj-valor" type="number" value="${v('valor','0')}"></div>
+        <div class="mf"><label>Parcelas</label><input id="pj-parcelas" type="number" min="1" value="${v('parcelas','12')}"></div>
+        <div class="mf"><label>Data início</label><input id="pj-dataInicio" type="date" value="${v('dataInicio')}"></div>
+      </div>`;
+  }
+
+  // Add input focus styles
+  div.querySelectorAll('input,select').forEach(el=>{
+    el.style.cssText+='padding:9px 11px;border:1px solid var(--border2);border-radius:var(--r);font-size:12px;background:var(--bg);color:var(--text);outline:none;width:100%;font-family:var(--font)';
+    el.addEventListener('focus',()=>el.style.borderColor='var(--gold)');
+    el.addEventListener('blur',()=>el.style.borderColor='var(--border2)');
+  });
+}
+
+function saveProj(editId) {
+  const nome = document.getElementById('pj-nome')?.value.trim();
+  if(!nome) { alert('Informe o nome do projeto.'); return; }
+  const tipo = document.getElementById('pj-tipo')?.value;
+  const g = id => document.getElementById(id)?.value;
+
+  let dados = { nome, tipo, ativo: true };
+  if(tipo === 'viagem') {
+    Object.assign(dados, { destino:g('pj-destino'), dataViagem:g('pj-dataViagem'), dias:g('pj-dias'), pessoas:g('pj-pessoas'), cambio:g('pj-cambio'), passagem:g('pj-passagem'), passagemParc:g('pj-passagemParc'), passagemInicio:g('pj-passagemInicio'), hotel:g('pj-hotel'), hotelParc:g('pj-hotelParc'), hotelInicio:g('pj-hotelInicio'), alimentacaoDia:g('pj-alimentacaoDia'), transporteDia:g('pj-transporteDia'), outrosLocal:g('pj-outrosLocal') });
+  } else if(tipo === 'imovel') {
+    Object.assign(dados, { valorImovel:g('pj-valorImovel'), dataCompra:g('pj-dataCompra'), entrada:g('pj-entrada'), valorFinanciado:g('pj-valorFinanciado'), taxa:g('pj-taxa'), parcelas:g('pj-parcelas'), sistema:g('pj-sistema'), itbi:g('pj-itbi'), escritura:g('pj-escritura'), reforma:g('pj-reforma'), reformaParcelas:g('pj-reformaParcelas') });
+  } else if(tipo === 'veiculo') {
+    Object.assign(dados, { valorVeiculo:g('pj-valorVeiculo'), dataInicio:g('pj-dataInicio'), entrada:g('pj-entrada'), valorFinanciado:g('pj-valorFinanciado'), taxa:g('pj-taxa'), parcelas:g('pj-parcelas'), sistema:g('pj-sistema'), seguro:g('pj-seguro') });
+  } else if(tipo === 'bem') {
+    Object.assign(dados, { nome:g('pj-nomeBem')||nome, valor:g('pj-valor'), parcelas:g('pj-parcelas'), dataInicio:g('pj-dataInicio') });
+    dados.nome = g('pj-nomeBem') || nome;
+  }
+
+  const projs = getProjetos();
+  if(editId) {
+    const idx = projs.findIndex(p => p.id === editId);
+    if(idx !== -1) { projs[idx] = { ...projs[idx], ...dados }; }
+  } else {
+    dados.id = 'proj' + Date.now();
+    projs.push(dados);
+    _selectedProj = dados.id;
+  }
+  saveProjetos(projs);
+  closeModal();
+  renderProj();
 }
 
 
