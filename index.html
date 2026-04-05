@@ -233,6 +233,8 @@ body{
 /* ── PAGES ── */
 .page{flex:1;overflow:hidden;display:none;min-height:0}
 .page.active{display:flex}
+#page-cfg{overflow-y:auto}
+#page-pl{overflow-y:auto}
 
 .phdr{padding:11px 14px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;background:var(--bg);z-index:2;flex-shrink:0}
 .slbl2{font-size:9px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.12em}
@@ -357,7 +359,7 @@ body{
 /* ════════════════════════
    P&L
 ════════════════════════ */
-.pl-page{flex-direction:column;overflow-y:auto;overflow-x:hidden;padding:16px;gap:14px;min-height:0}
+.pl-page{flex-direction:column;padding:16px;gap:14px}
 .pl-hero{background:var(--bg2);border:1px solid var(--border);border-radius:var(--rl);padding:16px;display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
 .plhc{text-align:center;padding:14px 12px;background:var(--bg);border-radius:var(--r);border:1px solid var(--border)}
 .plhl{font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:0.10em;margin-bottom:8px;font-weight:700}
@@ -488,7 +490,7 @@ body{
 /* ════════════════════════
    CONFIG
 ════════════════════════ */
-.cfg-page{flex-direction:column;overflow-y:auto;overflow-x:hidden;padding:16px;gap:14px;min-height:0}
+.cfg-page{flex-direction:column;padding:16px;gap:14px}
 .cfg-sec{border:1px solid var(--border);border-radius:var(--rl);overflow:hidden}
 .cfg-sh{padding:13px 16px;background:var(--bg2);border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center}
 .cfg-st{font-size:13px;font-weight:700;color:var(--text)}
