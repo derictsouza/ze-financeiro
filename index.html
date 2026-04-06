@@ -183,10 +183,12 @@ body{
   width:100%;max-width:1280px;
   height:calc(100vh - 32px);min-height:600px;
   border:1px solid var(--border);
-  border-radius:var(--rxl);overflow:hidden;
+  border-radius:var(--rxl);
+  overflow:hidden; /* needed for border-radius clipping */
   background:var(--bg);
   box-shadow:0 4px 32px rgba(0,0,0,0.10);
 }
+
 .app.visible{display:flex}
 
 /* ── TOPBAR ── */
@@ -233,8 +235,8 @@ body{
 /* ── PAGES ── */
 .page{flex:1;overflow:hidden;display:none;min-height:0}
 .page.active{display:flex}
-#page-cfg{overflow-y:auto}
-#page-pl{overflow-y:auto}
+/* Pages that scroll themselves */
+#page-cfg.active,#page-pl.active{overflow-y:auto;overflow-x:hidden;}
 
 .phdr{padding:11px 14px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;background:var(--bg);z-index:2;flex-shrink:0}
 .slbl2{font-size:9px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.12em}
